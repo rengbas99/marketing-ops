@@ -115,30 +115,25 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-end justify-end p-0">
       <div 
         className="fixed inset-0 transition-opacity" 
         style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', pointerEvents: 'auto' }}
-        onClick={(e) => {
-          // Only close if clicking the backdrop, not the modal content
-          if (e.target === e.currentTarget) {
-            onClose();
-          }
-        }} 
+        onClick={onClose}
       />
-      <div className="w-full max-w-2xl max-h-[85vh] relative z-[10000] animate-fadeIn p-0 flex flex-col bg-white rounded-3xl border border-gray-100" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between rounded-t-3xl">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">{asset.title || 'Untitled Asset'}</h3>
+      <div className="w-full max-w-lg h-full md:h-auto md:max-h-[100vh] relative z-[10000] animate-slideInRight p-0 flex flex-col bg-white border-l border-gray-200 md:rounded-l-3xl shadow-2xl overflow-hidden" style={{ boxShadow: '-4px 0 24px rgba(0,0,0,0.15)' }}>
+        <div className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-primary px-6 py-5 flex items-start justify-between">
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-white">{asset.title || 'Untitled Asset'}</h3>
             {client && (
-              <p className="text-sm text-primary font-bold uppercase tracking-wider mt-1">{client.company_name}</p>
+              <p className="text-sm text-white/90 font-bold uppercase tracking-wider mt-1">{client.company_name}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-white/20 rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-white" />
           </button>
         </div>
 
@@ -261,11 +256,11 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
 
         {/* Action Buttons - Fixed at bottom */}
           {!showRevisionForm && (
-          <div className="flex-shrink-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-3xl flex flex-wrap gap-3">
+          <div className="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex flex-col gap-3">
               <button
                 onClick={handleApprove}
                 disabled={isProcessing}
-                className="flex-1 min-w-[140px] px-4 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20"
+                className="w-full px-4 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20"
               >
                 {isProcessing ? (
                   <>
@@ -282,7 +277,7 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
               <button
                 onClick={handlePublish}
                 disabled={isProcessing}
-                className="flex-1 min-w-[140px] px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
               >
                 {isProcessing ? (
                   <>
@@ -299,7 +294,7 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
               <button
                 onClick={() => setShowRevisionForm(true)}
                 disabled={isProcessing}
-                className="flex-1 min-w-[140px] px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                className="w-full px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
               >
                 <AlertTriangle className="w-5 h-5" />
                 <span>Request Revision</span>

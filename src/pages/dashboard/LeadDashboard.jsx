@@ -79,17 +79,6 @@ export default function LeadDashboard() {
     }
   }).length || 0;
 
-  const activeAttendance = attendance.filter(a => {
-    if (!a || a.status !== 'clocked_in') return false;
-    // Must not have clocked out yet
-    if (a.clock_out) return false;
-    try {
-      return a.date === today;
-    } catch {
-      return false;
-    }
-  });
-
   // Check today's attendance
   useEffect(() => {
     if (isClockInLoading || isClockOutLoading) return;
@@ -442,6 +431,9 @@ export default function LeadDashboard() {
       };
     })
     .filter(item => item.asset && item.editor); // Show if asset exists and editor exists (client optional)
+
+  // Calculate active attendance: people actively working (on shoots or editing)
+  const activeAttendanceCount = teamOnShoots.length + teamEditing.length;
 
   if (loading.all) {
     return (
