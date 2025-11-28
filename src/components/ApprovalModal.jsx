@@ -122,120 +122,122 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
         onClick={onClose}
       />
       <div className="w-full max-w-lg h-full md:h-auto md:max-h-[100vh] relative z-[10000] animate-slideInRight p-0 flex flex-col bg-white border-l border-gray-200 md:rounded-l-3xl shadow-2xl overflow-hidden" style={{ boxShadow: '-4px 0 24px rgba(0,0,0,0.15)' }}>
-        <div className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-primary px-6 py-5 flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-white">{asset.title || 'Untitled Asset'}</h3>
+        <div className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-primary px-4 py-4 md:px-6 md:py-5 flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg md:text-xl font-bold text-white break-words">{asset.title || 'Untitled Asset'}</h3>
             {client && (
-              <p className="text-sm text-white/90 font-bold uppercase tracking-wider mt-1">{client.company_name}</p>
+              <p className="text-xs md:text-sm text-white/90 font-bold uppercase tracking-wider mt-1 truncate">{client.company_name}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+            className="flex-shrink-0 p-2 hover:bg-white/20 rounded-full transition-colors touch-manipulation"
+            aria-label="Close"
           >
             <X className="w-5 h-5 text-white" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 min-h-0">
           {/* Asset Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-100">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                <User className="w-4 h-4" />
+                <User className="w-4 h-4 flex-shrink-0" />
                 <span>Assigned To</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
                   {editor?.name?.charAt(0) || <User className="w-4 h-4" />}
                 </div>
-                <p className="font-bold text-gray-900">{editor?.name || asset.assigned_editor_email || asset.assigned_creator_email || 'Unassigned'}</p>
+                <p className="font-bold text-gray-900 text-sm md:text-base truncate">{editor?.name || asset.assigned_editor_email || asset.assigned_creator_email || 'Unassigned'}</p>
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-100">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-4 h-4 flex-shrink-0" />
                 <span>Deadline</span>
               </div>
-              <p className={`font-bold ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+              <p className={`font-bold text-sm md:text-base ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
                 {deadlineStr || 'No deadline'}
                 {isOverdue && ' (Overdue)'}
               </p>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-100">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                <FileEdit className="w-4 h-4" />
+                <FileEdit className="w-4 h-4 flex-shrink-0" />
                 <span>Progress</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="flex-1 bg-gray-200 rounded-full h-2 md:h-2.5 overflow-hidden">
                   <div
-                    className="bg-primary h-2.5 rounded-full transition-all duration-500"
+                    className="bg-primary h-2 md:h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${asset.work_progress || 0}%` }}
                   />
                 </div>
-                <span className="text-sm font-bold text-gray-900">{asset.work_progress || 0}%</span>
+                <span className="text-xs md:text-sm font-bold text-gray-900 whitespace-nowrap">{asset.work_progress || 0}%</span>
               </div>
             </div>
 
             {shoot && (
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div className="bg-gray-50 rounded-xl p-3 md:p-4 border border-gray-100">
                 <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="w-4 h-4 flex-shrink-0" />
                   <span>From Shoot</span>
                 </div>
-                <p className="font-bold text-gray-900">{shoot.shoot_name || 'Untitled Shoot'}</p>
+                <p className="font-bold text-gray-900 text-sm md:text-base truncate">{shoot.shoot_name || 'Untitled Shoot'}</p>
               </div>
             )}
           </div>
 
           {/* Work Links */}
           {asset.upload_folder_link && (
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+            <div className="bg-blue-50 rounded-xl p-3 md:p-4 border border-blue-100">
               <div className="flex items-center gap-2 text-xs font-bold text-blue-600 uppercase tracking-wider mb-2">
-                <LinkIcon className="w-4 h-4" />
+                <LinkIcon className="w-4 h-4 flex-shrink-0" />
                 <span>Work Files</span>
               </div>
               <a
                 href={asset.upload_folder_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary font-medium hover:underline text-sm break-all flex items-center gap-1"
+                className="text-primary font-medium hover:underline text-xs md:text-sm break-all flex items-start gap-1"
               >
-                {asset.upload_folder_link}
+                <LinkIcon className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <span className="break-all">{asset.upload_folder_link}</span>
               </a>
             </div>
           )}
 
           {/* Revision Form */}
           {showRevisionForm && (
-            <div className="border-t border-gray-100 pt-6 animate-fadeIn">
-              <label className="block text-sm font-bold text-gray-700 mb-2">
+            <div className="border-t border-gray-100 pt-4 md:pt-6 animate-fadeIn">
+              <label className="block text-sm md:text-base font-bold text-gray-700 mb-2">
                 Revision Notes <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={revisionNotes}
                 onChange={(e) => setRevisionNotes(e.target.value)}
                 placeholder="Explain what needs to be changed..."
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
-                rows="5"
+                className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none text-sm md:text-base"
+                rows="4"
               />
-              <div className="flex gap-3 mt-4">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3 mt-4">
                 <button
                   onClick={() => {
                     setShowRevisionForm(false);
                     setRevisionNotes('');
                   }}
-                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                  className="flex-1 px-4 py-2.5 md:py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition-colors touch-manipulation text-sm md:text-base"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleRequestRevision}
                   disabled={isProcessing || !revisionNotes.trim()}
-                  className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                  className="flex-1 px-4 py-2.5 md:py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 touch-manipulation text-sm md:text-base"
                 >
                   {isProcessing ? (
                     <>
@@ -256,11 +258,11 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
 
         {/* Action Buttons - Fixed at bottom */}
           {!showRevisionForm && (
-          <div className="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex flex-col gap-3">
+          <div className="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-4 md:px-6 py-3 md:py-4 flex flex-col gap-2 md:gap-3 safe-area-inset-bottom">
               <button
                 onClick={handleApprove}
                 disabled={isProcessing}
-                className="w-full px-4 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20"
+                className="w-full px-4 py-2.5 md:py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20 touch-manipulation text-sm md:text-base"
               >
                 {isProcessing ? (
                   <>
@@ -269,7 +271,7 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-5 h-5" />
+                    <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
                     <span>Approve</span>
                   </>
                 )}
@@ -277,7 +279,7 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
               <button
                 onClick={handlePublish}
                 disabled={isProcessing}
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
+                className="w-full px-4 py-2.5 md:py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 touch-manipulation text-sm md:text-base"
               >
                 {isProcessing ? (
                   <>
@@ -286,7 +288,7 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
                   </>
                 ) : (
                   <>
-                    <Rocket className="w-5 h-5" />
+                    <Rocket className="w-4 h-4 md:w-5 md:h-5" />
                     <span>Publish</span>
                   </>
                 )}
@@ -294,9 +296,9 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
               <button
                 onClick={() => setShowRevisionForm(true)}
                 disabled={isProcessing}
-                className="w-full px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                className="w-full px-4 py-2.5 md:py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 touch-manipulation text-sm md:text-base"
               >
-                <AlertTriangle className="w-5 h-5" />
+                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
                 <span>Request Revision</span>
               </button>
             </div>

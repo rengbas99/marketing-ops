@@ -590,28 +590,28 @@ export default function LeadDashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div 
           onClick={() => navigate('/dashboard/attendance')}
-          className="glass-card p-6 cursor-pointer hover:shadow-lg transition-all group"
+          className="glass-card p-4 md:p-6 cursor-pointer hover:shadow-lg transition-all group"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className={`p-3 rounded-xl bg-green-50 group-hover:bg-green-100 transition-colors`}>
-              <Clock className="w-6 h-6 text-green-600" />
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <div className={`p-2 md:p-3 rounded-xl bg-green-50 group-hover:bg-green-100 transition-colors`}>
+              <Clock className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
             </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 navigate('/dashboard/attendance?view=personal');
               }}
-              className="px-3 py-1 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-bold"
+              className="px-2 md:px-3 py-0.5 md:py-1 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-bold touch-manipulation"
             >
               My Attendance
             </button>
           </div>
           <div className="flex flex-col items-start">
-            <div className="text-3xl font-bold text-gray-900 mb-1 ml-1">{activeAttendanceCount || 0}</div>
-            <div className="text-sm text-gray-500 font-medium">Active Attendance</div>
+            <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{activeAttendanceCount || 0}</div>
+            <div className="text-xs md:text-sm text-gray-500 font-medium">Active Attendance</div>
           </div>
         </div>
         <StatCard
