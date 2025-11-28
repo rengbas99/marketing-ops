@@ -50,7 +50,7 @@ export default function StartShootForm({ isOpen, onClose, onStart, shoots, user 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 md:pt-32">
       <div className="fixed inset-0 transition-opacity" onClick={onClose} style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} />
       <div className="glass-card w-full max-w-md p-6 relative z-10 animate-fadeIn bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
         <div className="flex items-start justify-between mb-6">

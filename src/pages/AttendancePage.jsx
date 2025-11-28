@@ -544,13 +544,22 @@ export default function AttendancePage() {
 
     const totalDailyHours = allAttendance.reduce((sum, a) => {
       if (a.hours_worked) {
-        return sum + parseFloat(a.hours_worked);
+        const hours = parseFloat(a.hours_worked);
+        // Validate: hours should be reasonable (max 24 hours per day)
+        if (hours > 0 && hours <= 24) {
+          return sum + hours;
+        }
+        // If hours_worked seems invalid, recalculate from times
       }
       if (a.clock_in && a.clock_out) {
         try {
           const inTime = new Date(a.clock_in);
           const outTime = new Date(a.clock_out);
-          const hours = (outTime - inTime) / (1000 * 60 * 60);
+          const totalMinutes = (outTime - inTime) / (1000 * 60);
+          // Subtract break time if available
+          const breakMinutes = parseFloat(a.total_break_duration || 0);
+          const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hours = workMinutes / 60;
           return sum + hours;
         } catch {
           return sum;
@@ -594,13 +603,22 @@ export default function AttendancePage() {
       })
       .reduce((sum, a) => {
         if (a.hours_worked) {
-          return sum + parseFloat(a.hours_worked);
+          const hours = parseFloat(a.hours_worked);
+          // Validate: hours should be reasonable (max 24 hours per day)
+          if (hours > 0 && hours <= 24) {
+            return sum + hours;
+          }
+          // If hours_worked seems invalid, recalculate from times
         }
         if (a.clock_in && a.clock_out) {
           try {
             const inTime = new Date(a.clock_in);
             const outTime = new Date(a.clock_out);
-            const hours = (outTime - inTime) / (1000 * 60 * 60);
+            const totalMinutes = (outTime - inTime) / (1000 * 60);
+            // Subtract break time if available
+            const breakMinutes = parseFloat(a.total_break_duration || 0);
+            const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+            const hours = workMinutes / 60;
             return sum + hours;
           } catch {
             return sum;
