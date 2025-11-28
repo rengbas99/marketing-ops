@@ -115,10 +115,10 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div 
-        className="fixed inset-0 transition-opacity z-[100]" 
-        style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px', pointerEvents: 'auto' }}
+        className="fixed inset-0 transition-opacity" 
+        style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', pointerEvents: 'auto' }}
         onClick={(e) => {
           // Only close if clicking the backdrop, not the modal content
           if (e.target === e.currentTarget) {
@@ -126,8 +126,8 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
           }
         }} 
       />
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn p-0 flex flex-col bg-white rounded-3xl border border-gray-100" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between z-[102] rounded-t-3xl">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-[10000] animate-fadeIn p-0 flex flex-col bg-white rounded-3xl border border-gray-100" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between z-[10001] rounded-t-3xl">
           <div>
             <h3 className="text-xl font-bold text-gray-900">{asset.title || 'Untitled Asset'}</h3>
             {client && (
@@ -261,7 +261,7 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
 
         {/* Action Buttons - Sticky at bottom */}
           {!showRevisionForm && (
-          <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-3xl flex flex-wrap gap-3 z-[103]">
+          <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-3xl flex flex-wrap gap-3 z-[10001]">
               <button
                 onClick={handleApprove}
                 disabled={isProcessing}

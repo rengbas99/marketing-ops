@@ -842,9 +842,9 @@ export default function LeadDashboard() {
 
       {/* Clock Out Report Modal */}
       {showClockOutReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div 
-            className="fixed inset-0 transition-opacity z-[100]" 
+            className="fixed inset-0 transition-opacity" 
             style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -853,7 +853,7 @@ export default function LeadDashboard() {
               }
             }} 
           />
-          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+          <div className="w-full max-w-md relative z-[10000] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
               <button

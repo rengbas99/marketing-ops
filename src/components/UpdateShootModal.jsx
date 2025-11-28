@@ -71,9 +71,9 @@ export default function UpdateShootModal({ shoot, users, clients, onClose, onUpd
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="fixed inset-0 z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={onClose} />
-      <div className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative z-[101] bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="fixed inset-0" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }} onClick={onClose} />
+      <div className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative z-[10000] bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Update Shoot</h2>
