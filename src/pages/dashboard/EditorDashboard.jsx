@@ -278,8 +278,10 @@ export default function EditorDashboard() {
             const currentAsset = allAssets[assetIndex];
             await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
               ...currentAsset,
+              asset_id: selectedAssetForClockIn,
               status: currentAsset.status === ASSET_STATUS.REVISION ? ASSET_STATUS.IN_PROGRESS : ASSET_STATUS.IN_PROGRESS,
               current_editor_status: 'Working',
+              updated_at: new Date().toISOString(),
             });
           } catch (assetErr) {
             // Log error but don't block clock-in
@@ -386,19 +388,24 @@ export default function EditorDashboard() {
 
           await updateRow(COLLECTIONS.EDITOR_TIME_LOGS, logIndex + 2, {
             ...activeTimeLog,
+            log_id: activeTimeLog.log_id,
             end_time: clockOutTimeISO,
             duration: totalDuration.toFixed(2),
             work_duration: workDuration.toFixed(2),
             task_status: 'Completed',
+            updated_at: new Date().toISOString(),
           });
 
           const allAssets = Array.isArray(data.Assets) ? data.Assets : [];
           const assetIndex = allAssets.findIndex(a => a && a.asset_id === activeTimeLog.asset_id);
           if (assetIndex !== -1) {
             await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+              ...allAssets[assetIndex],
+              asset_id: activeTimeLog.asset_id,
               status: ASSET_STATUS.REVIEW,
               current_editor_status: 'Review',
               work_progress: 100,
+              updated_at: new Date().toISOString(),
             });
           }
         }
@@ -470,14 +477,20 @@ export default function EditorDashboard() {
         const currentAsset = allAssets[assetIndex];
         await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
           ...currentAsset,
+          asset_id: currentAsset.asset_id,
           status: currentAsset.status === ASSET_STATUS.REVISION ? ASSET_STATUS.IN_PROGRESS : ASSET_STATUS.IN_PROGRESS,
           current_editor_status: 'Working',
+          updated_at: new Date().toISOString(),
         });
+      } else {
+        error('Asset not found in data. Please refresh the page.');
+        return;
       }
 
       await forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.EDITOR_TIME_LOGS]);
       success('Editing started!');
     } catch (err) {
+      console.error('Error starting editing:', err);
       error('Error starting editing: ' + err.message);
     }
   };
@@ -493,13 +506,17 @@ export default function EditorDashboard() {
       if (logIndex !== -1) {
         await updateRow(COLLECTIONS.EDITOR_TIME_LOGS, logIndex + 2, {
           ...activeTimeLog,
+          log_id: activeTimeLog.log_id,
           ...updates,
           updated_at: new Date().toISOString(),
         });
         // Force refresh to ensure real-time update on lead dashboard
         await forceRefresh([COLLECTIONS.EDITOR_TIME_LOGS, COLLECTIONS.ASSETS]);
+      } else {
+        error('Time log not found. Please refresh the page.');
       }
     } catch (err) {
+      console.error('Error updating time log:', err);
       error('Error updating time log: ' + err.message);
     }
   };
@@ -530,9 +547,14 @@ export default function EditorDashboard() {
         if (logIndex !== -1) {
           await updateRow(COLLECTIONS.EDITOR_TIME_LOGS, logIndex + 2, {
             ...activeTimeLog,
+            log_id: activeTimeLog.log_id,
             break_start_time: breakStart,
             task_status: 'Paused',
+            updated_at: new Date().toISOString(),
           });
+        } else {
+          error('Time log not found. Please refresh the page.');
+          return;
         }
 
         const allAssets = Array.isArray(data.Assets) ? data.Assets : [];
@@ -540,7 +562,10 @@ export default function EditorDashboard() {
         if (assetIndex !== -1) {
           try {
             await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+              ...allAssets[assetIndex],
+              asset_id: activeTimeLog.asset_id,
               current_editor_status: 'Paused',
+              updated_at: new Date().toISOString(),
             });
           } catch (assetErr) {
             console.error('Error updating asset status for pause:', assetErr);
@@ -590,9 +615,15 @@ export default function EditorDashboard() {
         if (logIndex !== -1) {
           await updateRow(COLLECTIONS.EDITOR_TIME_LOGS, logIndex + 2, {
             ...activeTimeLog,
+            log_id: activeTimeLog.log_id,
             break_start_time: new Date().toISOString(),
             task_status: 'On Break',
+            updated_at: new Date().toISOString(),
           });
+        } else {
+          console.error('Time log not found at index:', logIndex);
+          error('Time log not found. Please refresh the page.');
+          return;
         }
 
         const allAssets = Array.isArray(data.Assets) ? data.Assets : [];
@@ -600,7 +631,10 @@ export default function EditorDashboard() {
         if (assetIndex !== -1) {
           try {
             await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+              ...allAssets[assetIndex],
+              asset_id: activeTimeLog.asset_id,
               current_editor_status: 'On Break',
+              updated_at: new Date().toISOString(),
             });
           } catch (assetErr) {
             // Log error but don't block break start
@@ -643,8 +677,10 @@ export default function EditorDashboard() {
       if (breakIndex !== -1) {
         await updateRow(COLLECTIONS.TIME_BREAKS, breakIndex + 2, {
           ...activeBreak,
+          break_id: activeBreak.break_id,
           break_end: breakEnd.toISOString(),
           duration: duration,
+          updated_at: new Date().toISOString(),
         });
       }
 
@@ -654,9 +690,11 @@ export default function EditorDashboard() {
           const currentTotal = (activeTimeLog.total_break_duration || 0) + duration;
           await updateRow(COLLECTIONS.EDITOR_TIME_LOGS, logIndex + 2, {
             ...activeTimeLog,
+            log_id: activeTimeLog.log_id,
             break_end_time: breakEnd.toISOString(),
             total_break_duration: currentTotal,
             task_status: 'Working',
+            updated_at: new Date().toISOString(),
           });
         }
 
@@ -664,7 +702,10 @@ export default function EditorDashboard() {
         const assetIndex = allAssets.findIndex(a => a && a.asset_id === activeTimeLog.asset_id);
         if (assetIndex !== -1) {
           await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+            ...allAssets[assetIndex],
+            asset_id: activeTimeLog.asset_id,
             current_editor_status: 'Working',
+            updated_at: new Date().toISOString(),
           });
         }
       } else if (todayAttendance && activeBreak.attendance_id) {
@@ -697,7 +738,9 @@ export default function EditorDashboard() {
       if (logIndex !== -1) {
         await updateRow(COLLECTIONS.EDITOR_TIME_LOGS, logIndex + 2, {
           ...activeTimeLog,
+          log_id: activeTimeLog.log_id,
           work_links: links,
+          updated_at: new Date().toISOString(),
         });
 
         const allAssets = Array.isArray(data.Assets) ? data.Assets : [];
@@ -705,9 +748,17 @@ export default function EditorDashboard() {
         if (assetIndex !== -1) {
           const primaryLink = links.split(',')[0]?.trim() || '';
           await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+            ...allAssets[assetIndex],
+            asset_id: activeTimeLog.asset_id,
             upload_folder_link: primaryLink,
+            updated_at: new Date().toISOString(),
           });
+        } else {
+          error('Asset not found. Please refresh the page.');
         }
+      } else {
+        error('Time log not found. Please refresh the page.');
+      }
 
         await forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.EDITOR_TIME_LOGS]);
         success('Work links saved!');
@@ -725,6 +776,8 @@ export default function EditorDashboard() {
       const assetIndex = allAssets.findIndex(a => a && a.asset_id === activeTimeLog.asset_id);
       if (assetIndex !== -1) {
         await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+          ...allAssets[assetIndex],
+          asset_id: activeTimeLog.asset_id,
           work_progress: progress,
           updated_at: new Date().toISOString(),
         });
@@ -774,10 +827,12 @@ export default function EditorDashboard() {
 
         await updateRow(COLLECTIONS.EDITOR_TIME_LOGS, logIndex + 2, {
           ...activeTimeLog,
+          log_id: activeTimeLog.log_id,
           end_time: endTime.toISOString(),
           duration: totalDuration.toFixed(2),
           work_duration: workDuration.toFixed(2),
           task_status: 'Completed',
+          updated_at: new Date().toISOString(),
         });
 
         const allAssets = Array.isArray(data.Assets) ? data.Assets : [];
@@ -785,10 +840,15 @@ export default function EditorDashboard() {
         if (assetIndex !== -1) {
           const asset = allAssets[assetIndex];
           await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+            ...asset,
+            asset_id: assetId,
             status: status,
             current_editor_status: status === ASSET_STATUS.REVIEW ? 'Review' : 'Paused',
             work_progress: status === ASSET_STATUS.REVIEW ? 100 : (asset.work_progress || 0),
+            updated_at: new Date().toISOString(),
           });
+        } else {
+          error('Asset not found. Please refresh the page.');
         }
 
         setActiveTimeLog(null);
