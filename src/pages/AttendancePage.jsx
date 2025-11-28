@@ -32,19 +32,21 @@ export default function AttendancePage() {
   // Update view mode when URL parameter changes
   useEffect(() => {
     const viewParam = searchParams.get('view');
-    if (viewParam === 'personal' && viewMode !== 'personal') {
+    if (viewParam === 'personal') {
       setViewMode('personal');
-    } else if (viewParam === 'team' && viewMode !== 'team') {
+    } else if (viewParam === 'team') {
       setViewMode('team');
-    } else if (viewParam === 'daily-status' && viewMode !== 'daily-status') {
+    } else if (viewParam === 'daily-status') {
       setViewMode('daily-status');
-    } else if (!viewParam && (user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD) && viewMode !== 'daily-status') {
-      // Default to daily-status for managers/leads when no param
-      setViewMode('daily-status');
-    } else if (!viewParam && viewMode !== 'personal') {
-      setViewMode('personal');
+    } else if (!viewParam) {
+      // Default based on user role when no param
+      if (user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD) {
+        setViewMode('daily-status');
+      } else {
+        setViewMode('personal');
+      }
     }
-  }, [searchParams, viewMode, user?.role]);
+  }, [searchParams, user?.role]);
   const [elapsedTime, setElapsedTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [editingAttendance, setEditingAttendance] = useState(null);
   const [editClockOut, setEditClockOut] = useState('');
