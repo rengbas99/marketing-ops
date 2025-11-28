@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,11 +8,13 @@ import BreakDialog from '../components/BreakDialog';
 import BreakTimer from '../components/BreakTimer';
 import WorkLinksModal from '../components/WorkLinksModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import CreateShootModal from '../components/CreateShootModal';
 import { Camera, Calendar, MapPin, Clock, User, Play, Square, Coffee, Link as LinkIcon, Plus, Edit, X, Calendar as CalendarIcon, AlertCircle, Trash2 } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES, SHOOT_STATUS } from '../constants';
 
 export default function ShootsPage() {
+  const navigate = useNavigate();
   const { data, loading, startPolling, stopPolling, addRow, updateRow, deleteRow, forceRefresh } = useData();
   const { user } = useAuth();
   const { success, error } = useToast();
@@ -28,6 +31,17 @@ export default function ShootsPage() {
   const [shootToCancel, setShootToCancel] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [shootToDelete, setShootToDelete] = useState(null);
+  const [showCreateShootModal, setShowCreateShootModal] = useState(false);
+  const [showShootAssignment, setShowShootAssignment] = useState(false);
+  const [isCreatingShoot, setIsCreatingShoot] = useState(false);
+  const [newShoot, setNewShoot] = useState({
+    shoot_name: '',
+    client_id: '',
+    photographer_id: '',
+    date: '',
+    time: '',
+    location_name: '',
+  });
 
   useEffect(() => {
     startPolling('shoots-page', [
@@ -46,6 +60,12 @@ export default function ShootsPage() {
   const attendance = Array.isArray(data.Photographer_Attendance) ? data.Photographer_Attendance : [];
   const clients = Array.isArray(data.Clients) ? data.Clients : [];
   const users = Array.isArray(data.Users) ? data.Users : [];
+
+  // Available photographers for shoot assignment
+  const availablePhotographers = (Array.isArray(users) ? users : []).filter(
+    u => u && u.active !== 'FALSE' && u.active !== false && 
+    (u.role === ROLES.PHOTOGRAPHER || u.role === ROLES.LEAD)
+  );
 
   useEffect(() => {
     if (user?.role === ROLES.PHOTOGRAPHER) {
@@ -303,6 +323,75 @@ export default function ShootsPage() {
     }
   };
 
+  const handleCreateShoot = async (shootData) => {
+    try {
+      await addRow(COLLECTIONS.SHOOTS, shootData);
+      await forceRefresh([COLLECTIONS.SHOOTS, COLLECTIONS.CONTENT_CALENDAR]);
+      success('Shoot created successfully!');
+      setShowCreateShootModal(false);
+    } catch (err) {
+      error('Error creating shoot: ' + err.message);
+    }
+  };
+
+  const handleAssignShoot = async (e) => {
+    e.preventDefault();
+    if (isCreatingShoot) return;
+
+    if (!newShoot.shoot_name || !newShoot.photographer_id || !newShoot.date) {
+      error('Please fill in all required fields (Shoot Name, Videographer, and Date)');
+      return;
+    }
+
+    try {
+      const existingShoot = shoots.find(s =>
+        s &&
+        (s.shoot_name === newShoot.shoot_name || s.title === newShoot.shoot_name) &&
+        s.photographer_id === newShoot.photographer_id &&
+        s.date === newShoot.date &&
+        s.status !== SHOOT_STATUS.COMPLETED
+      );
+
+      if (existingShoot) {
+        error('A shoot with the same name, videographer, and date already exists');
+        return;
+      }
+
+      setIsCreatingShoot(true);
+      await addRow(COLLECTIONS.SHOOTS, {
+        shoot_id: `SH-${Date.now()}`,
+        title: newShoot.shoot_name,
+        shoot_name: newShoot.shoot_name,
+        client_id: newShoot.client_id || '',
+        photographer_id: newShoot.photographer_id,
+        lead_photographer_email: newShoot.photographer_id,
+        date: newShoot.date,
+        time: newShoot.time || '',
+        location: newShoot.location_name || '',
+        location_name: newShoot.location_name || '',
+        status: SHOOT_STATUS.SCHEDULED,
+        notes: '',
+        created_at: new Date().toISOString(),
+      });
+
+      success(`Shoot assigned to ${users.find(u => u && u.email === newShoot.photographer_id)?.name || newShoot.photographer_id}`);
+      setShowShootAssignment(false);
+      setNewShoot({
+        shoot_name: '',
+        client_id: '',
+        photographer_id: '',
+        date: '',
+        time: '',
+        location_name: '',
+      });
+      forceRefresh([COLLECTIONS.SHOOTS, COLLECTIONS.CONTENT_CALENDAR]).catch(console.error);
+    } catch (err) {
+      error('Error assigning shoot: ' + err.message);
+    } finally {
+      setIsCreatingShoot(false);
+    }
+  };
+
   const handleCancelShoot = (shoot) => {
     setShootToCancel(shoot);
     setShowCancelConfirm(true);
@@ -462,13 +551,16 @@ export default function ShootsPage() {
       {showEditModal && editingShoot && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
-            onClick={() => {
-              setShowEditModal(false);
-              setEditingShoot(null);
+            className="fixed inset-0 transition-opacity"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowEditModal(false);
+                setEditingShoot(null);
+              }
             }}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Edit Shoot</h3>
               <button
@@ -556,15 +648,26 @@ export default function ShootsPage() {
           <p className="text-gray-600">Manage and track photography shoots</p>
         </div>
 
-        {user?.role === ROLES.PHOTOGRAPHER && !activeShoot && (
-          <button
-            onClick={() => setShowStartForm(true)}
-            className="glass-button bg-primary text-white hover:bg-primary-dark border-none flex items-center gap-2 px-6 py-3"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Start New Shoot</span>
-          </button>
-        )}
+        <div className="flex gap-3">
+          {user?.role === ROLES.PHOTOGRAPHER && !activeShoot && (
+            <button
+              onClick={() => setShowStartForm(true)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/30"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Start New Shoot</span>
+            </button>
+          )}
+          {(user?.role === ROLES.LEAD || user?.role === ROLES.MANAGER || user?.role === ROLES.CONTENT_CREATOR) && (
+            <button
+              onClick={() => setShowShootAssignment(true)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/30"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Assign Shoot</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Active Shoot Card (for photographers) */}
@@ -627,15 +730,15 @@ export default function ShootsPage() {
 
             {/* Time Stats */}
             <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-white/60 p-4 rounded-xl border border-gray-100 backdrop-blur-sm">
+              <div className="bg-white/80 p-4 rounded-xl border border-gray-100">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Time</div>
                 <div className="text-2xl font-bold text-gray-900">{elapsed.hours}h {elapsed.minutes}m</div>
               </div>
-              <div className="bg-white/60 p-4 rounded-xl border border-gray-100 backdrop-blur-sm">
+              <div className="bg-white/80 p-4 rounded-xl border border-gray-100">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Break Time</div>
                 <div className="text-2xl font-bold text-orange-600">{formatBreakDuration(breakDuration)}</div>
               </div>
-              <div className="bg-white/60 p-4 rounded-xl border border-gray-100 backdrop-blur-sm">
+              <div className="bg-white/80 p-4 rounded-xl border border-gray-100">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Work Time</div>
                 <div className="text-2xl font-bold text-primary">
                   {Math.floor((elapsed.hours * 60 + elapsed.minutes - breakDuration) / 60)}h
@@ -832,6 +935,167 @@ export default function ShootsPage() {
           )}
         </div>
       </div>
+
+      {/* Create Shoot Modal */}
+      <CreateShootModal
+        isOpen={showCreateShootModal}
+        onClose={() => setShowCreateShootModal(false)}
+        onSubmit={handleCreateShoot}
+        clients={clients}
+        photographers={users.filter(u => u && u.role === ROLES.PHOTOGRAPHER)}
+      />
+
+      {/* Assign Shoot Modal */}
+      {showShootAssignment && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 transition-opacity"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowShootAssignment(false);
+                setNewShoot({
+                  shoot_name: '',
+                  client_id: '',
+                  photographer_id: '',
+                  date: '',
+                  time: '',
+                  location_name: '',
+                });
+              }
+            }}
+          />
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-start justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
+              <button
+                onClick={() => {
+                  setShowShootAssignment(false);
+                  setNewShoot({
+                    shoot_name: '',
+                    client_id: '',
+                    photographer_id: '',
+                    date: '',
+                    time: '',
+                    location_name: '',
+                  });
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignShoot} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Shoot Name *</label>
+                <input
+                  type="text"
+                  value={newShoot.shoot_name}
+                  onChange={(e) => setNewShoot({ ...newShoot, shoot_name: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  placeholder="e.g. Product Launch Shoot"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
+                <select
+                  value={newShoot.client_id}
+                  onChange={(e) => setNewShoot({ ...newShoot, client_id: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">No client (General shoot)</option>
+                  {(Array.isArray(clients) ? clients : []).map(client => (
+                    <option key={client?.client_id} value={client?.client_id}>
+                      {client?.company_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Videographer/Lead *</label>
+                <select
+                  value={newShoot.photographer_id}
+                  onChange={(e) => setNewShoot({ ...newShoot, photographer_id: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">Select videographer...</option>
+                  {availablePhotographers.map(person => (
+                    <option key={person.email} value={person.email}>
+                      {person.name || person.email} ({person.role === ROLES.LEAD ? 'Lead' : 'Media'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                  <input
+                    type="date"
+                    value={newShoot.date}
+                    onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })}
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                  <input
+                    type="time"
+                    value={newShoot.time}
+                    onChange={(e) => setNewShoot({ ...newShoot, time: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                <input
+                  type="text"
+                  value={newShoot.location_name}
+                  onChange={(e) => setNewShoot({ ...newShoot, location_name: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  placeholder="e.g. Studio A"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowShootAssignment(false);
+                    setNewShoot({
+                      shoot_name: '',
+                      client_id: '',
+                      photographer_id: '',
+                      date: '',
+                      time: '',
+                      location_name: '',
+                    });
+                  }}
+                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingShoot}
+                  className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50"
+                >
+                  {isCreatingShoot ? 'Assigning...' : 'Assign Shoot'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

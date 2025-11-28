@@ -25,6 +25,8 @@ export default function PhotographerDashboard() {
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
   const [activeBreak, setActiveBreak] = useState(null);
   const [showBreakDialog, setShowBreakDialog] = useState(false);
+  const [showClockOutReport, setShowClockOutReport] = useState(false);
+  const [clockOutReport, setClockOutReport] = useState('');
 
   useEffect(() => {
     startPolling('photographer-dashboard', [
@@ -237,7 +239,10 @@ export default function PhotographerDashboard() {
         }
       }
 
-      await forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.PHOTOGRAPHER_ATTENDANCE, COLLECTIONS.SHOOTS]);
+      // Make forceRefresh non-blocking
+      forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.PHOTOGRAPHER_ATTENDANCE, COLLECTIONS.SHOOTS]).catch(err => {
+        console.error('Error refreshing data:', err);
+      });
 
       setShowShootSelector(false);
       setSelectedShoot('');
@@ -252,55 +257,95 @@ export default function PhotographerDashboard() {
     }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOutClick = () => {
+    setShowClockOutReport(true);
+  };
+
+  const handleClockOut = async (reportText = '') => {
     if (!todayAttendance) return;
     setIsClockOutLoading(true);
 
-    if (activeBreak) await handleEndBreak();
+    try {
+      if (activeBreak) {
+        try {
+          await handleEndBreak();
+        } catch (breakErr) {
+          console.error('Error ending break:', breakErr);
+        }
+      }
 
     const clockOutTime = new Date();
     const clockInTime = new Date(todayAttendance.clock_in);
-    const hoursWorked = (clockOutTime - clockInTime) / (1000 * 60 * 60);
-    const hours = Math.floor(hoursWorked);
-    const minutes = Math.floor((hoursWorked - hours) * 60);
+      
+      // Validate clock in time
+      if (!clockInTime || isNaN(clockInTime.getTime())) {
+        error('Invalid clock-in time');
+        setIsClockOutLoading(false);
+        setShowClockOutReport(false);
+        setClockOutReport('');
+        return;
+      }
 
-    try {
       const clockOutTimeISO = clockOutTime.toISOString();
 
       let totalBreakMinutes = 0;
-      if (activeShoot) {
+      try {
+        if (activeShoot && activeShoot.attendance_id) {
         // Calculate breaks from Time_Breaks collection for this shoot
-        const shootBreaks = breaks.filter(b => 
+          const shootBreaks = (Array.isArray(breaks) ? breaks : []).filter(b => 
           b && b.attendance_id === activeShoot.attendance_id && b.break_end
         );
-        const calculatedBreaks = shootBreaks.reduce((sum, b) => sum + (parseFloat(b.duration) || 0), 0);
-        // Use calculated breaks or stored total, whichever is higher
+          const calculatedBreaks = shootBreaks.reduce((sum, b) => {
+            try {
+              return sum + (parseFloat(b.duration) || 0);
+            } catch {
+              return sum;
+            }
+          }, 0);
         totalBreakMinutes = Math.max(calculatedBreaks, parseFloat(activeShoot.total_break_duration || 0));
       } else {
         // No active shoot - calculate all breaks for today
-        const todayPhotographerAttendance = photographerAttendance.filter(pa => {
-          if (!pa || !pa.start_time) return false;
-          const paDate = new Date(pa.start_time || pa.date).toISOString().split('T')[0];
           const today = new Date().toISOString().split('T')[0];
-          return paDate === today && pa.photographer_email === user.email;
+          const todayPhotographerAttendance = (Array.isArray(photographerAttendance) ? photographerAttendance : []).filter(pa => {
+          if (!pa || !pa.start_time) return false;
+            try {
+          const paDate = new Date(pa.start_time || pa.date).toISOString().split('T')[0];
+              return paDate === today && pa.photographer_email === user?.email;
+            } catch {
+              return false;
+            }
         });
         
         // Calculate breaks from Time_Breaks collection
-        const todayBreaks = breaks.filter(b => {
+          const todayBreaks = (Array.isArray(breaks) ? breaks : []).filter(b => {
           if (!b || !b.break_end) return false;
-          // Check if break is linked to today's attendance or photographer attendance
           if (b.attendance_id === todayAttendance.attendance_id) return true;
-          return todayPhotographerAttendance.some(pa => pa.attendance_id === b.attendance_id);
+            return todayPhotographerAttendance.some(pa => pa && pa.attendance_id === b.attendance_id);
         });
-        const calculatedBreaks = todayBreaks.reduce((sum, b) => sum + (parseFloat(b.duration) || 0), 0);
+          
+          const calculatedBreaks = todayBreaks.reduce((sum, b) => {
+            try {
+              return sum + (parseFloat(b.duration) || 0);
+            } catch {
+              return sum;
+            }
+          }, 0);
         
         const photographerAttendanceBreaks = todayPhotographerAttendance.reduce((sum, pa) => {
+            try {
           return sum + (parseFloat(pa.total_break_duration) || 0);
+            } catch {
+              return sum;
+            }
         }, 0);
 
         const attendanceBreaks = parseFloat(todayAttendance.total_break_duration || 0);
-        // Use calculated breaks or stored totals, whichever is higher
         totalBreakMinutes = Math.max(calculatedBreaks, photographerAttendanceBreaks + attendanceBreaks);
+        }
+      } catch (breakCalcErr) {
+        console.error('Error calculating breaks:', breakCalcErr);
+        // Use stored value as fallback
+        totalBreakMinutes = parseFloat(todayAttendance.total_break_duration || 0);
       }
 
       const totalMinutes = (clockOutTime - clockInTime) / (1000 * 60);
@@ -317,6 +362,7 @@ export default function PhotographerDashboard() {
           clock_out: clockOutTimeISO,
           status: 'clocked_out',
           hours_worked: hoursWorkedExcludingBreaks.toFixed(2),
+          daily_report: reportText || todayAttendance.daily_report || '',
         });
       }
 
@@ -365,15 +411,24 @@ export default function PhotographerDashboard() {
         }
       }
 
-      await forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.PHOTOGRAPHER_ATTENDANCE, COLLECTIONS.SHOOTS]);
+      // Make forceRefresh non-blocking
+      forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.PHOTOGRAPHER_ATTENDANCE, COLLECTIONS.SHOOTS]).catch(err => {
+        console.error('Error refreshing data:', err);
+      });
 
       setClockedIn(false);
       setActiveShoot(null);
+      setShowClockOutReport(false);
+      setClockOutReport('');
+      
       const workHours = Math.floor(hoursWorkedExcludingBreaks);
       const workMins = Math.floor((hoursWorkedExcludingBreaks - workHours) * 60);
       success(`Clocked out! You worked ${workHours}h ${workMins}m today (excluding ${formatBreakDuration(totalBreakMinutes)} break time).`);
     } catch (err) {
-      error('Error clocking out: ' + err.message);
+      console.error('Clock out error:', err);
+      error('Error clocking out: ' + (err.message || 'Unknown error'));
+      setShowClockOutReport(false);
+      setClockOutReport('');
     } finally {
       setIsClockOutLoading(false);
     }
@@ -424,10 +479,15 @@ export default function PhotographerDashboard() {
           a => a && a.attendance_id === todayAttendance.attendance_id
         );
         if (attIndex !== -1) {
-          await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
-            ...todayAttendance,
-            break_start_time: new Date().toISOString(),
-          });
+          try {
+            await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
+              ...todayAttendance,
+              break_start_time: new Date().toISOString(),
+            });
+          } catch (attErr) {
+            // Log error but don't block break start - attendance record might not exist in Sheets
+            console.error('Error updating attendance for break:', attErr);
+          }
         }
       }
 
@@ -619,16 +679,12 @@ export default function PhotographerDashboard() {
                 </button>
               )}
               <button
-                onClick={handleClockOut}
+                onClick={handleClockOutClick}
                 disabled={isClockOutLoading}
                 className="flex-1 bg-red-50 text-red-600 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-50"
               >
-                {isClockOutLoading ? 'Processing...' : (
-                  <>
                     <LogOut className="w-4 h-4" />
                     Clock Out
-                  </>
-                )}
               </button>
             </div>
           </div>
@@ -650,13 +706,14 @@ export default function PhotographerDashboard() {
       {showShootSelector && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
             onClick={() => {
               setShowShootSelector(false);
               setSelectedShoot('');
             }}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Select Shoot</h3>
               <button
@@ -801,6 +858,77 @@ export default function PhotographerDashboard() {
         onClose={() => setShowBreakDialog(false)}
         onConfirm={handleTakeBreak}
       />
+
+      {/* Clock Out Report Modal */}
+      {showClockOutReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 transition-opacity z-[100]" 
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowClockOutReport(false);
+                setClockOutReport('');
+              }
+            }} 
+          />
+          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              (Optional) Provide a brief summary of what you accomplished today before clocking out.
+            </p>
+            <textarea
+              value={clockOutReport}
+              onChange={(e) => setClockOutReport(e.target.value)}
+              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
+              rows="5"
+              autoFocus
+              disabled={isClockOutLoading}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleClockOut(clockOutReport)}
+                disabled={isClockOutLoading}
+                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isClockOutLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-5 h-5" />
+                    Clock Out
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                disabled={isClockOutLoading}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

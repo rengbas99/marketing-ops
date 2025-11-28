@@ -609,11 +609,12 @@ export default function WorkHoursPage() {
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div
-              className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity z-[100]"
+              className="fixed inset-0 transition-opacity z-[100]"
+              style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
               onClick={() => setShowWorkDetailsModal(null)}
             />
-            <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn p-0 flex flex-col bg-white/95 shadow-2xl">
-              <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between z-[102]">
+            <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn p-0 flex flex-col bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-[102] rounded-t-2xl">
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">
                     Work Details - {employee?.name || showWorkDetailsModal}

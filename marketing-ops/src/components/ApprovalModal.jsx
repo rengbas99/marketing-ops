@@ -116,8 +116,17 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity z-[100]" onClick={onClose} />
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn p-0 flex flex-col bg-white rounded-3xl shadow-2xl border border-gray-100">
+      <div 
+        className="fixed inset-0 transition-opacity z-[100]" 
+        style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px', pointerEvents: 'auto' }}
+        onClick={(e) => {
+          // Only close if clicking the backdrop, not the modal content
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }} 
+      />
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn p-0 flex flex-col bg-white rounded-3xl border border-gray-100" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between z-[102] rounded-t-3xl">
           <div>
             <h3 className="text-xl font-bold text-gray-900">{asset.title || 'Untitled Asset'}</h3>
@@ -251,52 +260,52 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
         </div>
 
         {/* Action Buttons - Sticky at bottom */}
-        {!showRevisionForm && (
+          {!showRevisionForm && (
           <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-3xl flex flex-wrap gap-3 z-[103]">
-            <button
-              onClick={handleApprove}
-              disabled={isProcessing}
-              className="flex-1 min-w-[140px] px-4 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-5 h-5" />
-                  <span>Approve</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={handlePublish}
-              disabled={isProcessing}
-              className="flex-1 min-w-[140px] px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <Rocket className="w-5 h-5" />
-                  <span>Publish</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => setShowRevisionForm(true)}
-              disabled={isProcessing}
-              className="flex-1 min-w-[140px] px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
-            >
-              <AlertTriangle className="w-5 h-5" />
-              <span>Request Revision</span>
-            </button>
-          </div>
-        )}
+              <button
+                onClick={handleApprove}
+                disabled={isProcessing}
+                className="flex-1 min-w-[140px] px-4 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Approve</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={isProcessing}
+                className="flex-1 min-w-[140px] px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="w-5 h-5" />
+                    <span>Publish</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowRevisionForm(true)}
+                disabled={isProcessing}
+                className="flex-1 min-w-[140px] px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+              >
+                <AlertTriangle className="w-5 h-5" />
+                <span>Request Revision</span>
+              </button>
+            </div>
+          )}
       </div>
     </div>
   );

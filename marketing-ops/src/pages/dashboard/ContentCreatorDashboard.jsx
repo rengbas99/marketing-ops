@@ -22,6 +22,8 @@ export default function ContentCreatorDashboard() {
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
   const [activeBreak, setActiveBreak] = useState(null);
   const [showBreakDialog, setShowBreakDialog] = useState(false);
+  const [showClockOutReport, setShowClockOutReport] = useState(false);
+  const [clockOutReport, setClockOutReport] = useState('');
 
   useEffect(() => {
     startPolling('content-creator-dashboard', [
@@ -226,13 +228,21 @@ export default function ContentCreatorDashboard() {
     }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOutClick = () => {
+    setShowClockOutReport(true);
+  };
+
+  const handleClockOut = async (reportText = '') => {
     if (!todayAttendance) return;
 
     setIsClockOutLoading(true);
     try {
       if (activeBreak) {
+        try {
         await handleEndBreak();
+        } catch (breakErr) {
+          console.error('Error ending break:', breakErr);
+        }
       }
 
       const clockOutTime = new Date();
@@ -276,6 +286,7 @@ export default function ContentCreatorDashboard() {
           clock_out: clockOutTime.toISOString(),
           status: 'clocked_out',
           hours_worked: hoursWorkedExcludingBreaks.toFixed(2),
+          daily_report: reportText || todayAttendance.daily_report || '',
         });
 
         if (activeTimeLog) {
@@ -299,15 +310,23 @@ export default function ContentCreatorDashboard() {
           }
         }
 
-        await forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.EDITOR_TIME_LOGS]);
+        forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.EDITOR_TIME_LOGS]).catch(err => {
+          console.error('Error refreshing data:', err);
+        });
+        
         setClockedIn(false);
+        setShowClockOutReport(false);
+        setClockOutReport('');
 
         const workHours = Math.floor(hoursWorkedExcludingBreaks);
         const workMins = Math.floor((hoursWorkedExcludingBreaks - workHours) * 60);
         success(`Clocked out! You worked ${workHours}h ${workMins}m today (excluding ${Math.floor(totalBreakMinutes / 60)}h ${totalBreakMinutes % 60}m break time).`);
       }
     } catch (err) {
-      error('Error clocking out: ' + err.message);
+      console.error('Clock out error:', err);
+      error('Error clocking out: ' + (err.message || 'Unknown error'));
+      setShowClockOutReport(false);
+      setClockOutReport('');
     } finally {
       setIsClockOutLoading(false);
     }
@@ -539,16 +558,12 @@ export default function ContentCreatorDashboard() {
                 </button>
               )}
               <button
-                onClick={handleClockOut}
+                onClick={handleClockOutClick}
                 disabled={isClockOutLoading}
                 className="flex-1 bg-red-50 text-red-600 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-50"
               >
-                {isClockOutLoading ? 'Processing...' : (
-                  <>
                     <LogOut className="w-4 h-4" />
                     Clock Out
-                  </>
-                )}
               </button>
             </div>
           </div>
@@ -575,13 +590,14 @@ export default function ContentCreatorDashboard() {
       {showTaskSelector && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
             onClick={() => {
               setShowTaskSelector(false);
               setSelectedTask('');
             }}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Select Task</h3>
               <button
@@ -815,6 +831,77 @@ export default function ContentCreatorDashboard() {
         onClose={() => setShowBreakDialog(false)}
         onConfirm={handleTakeBreak}
       />
+
+      {/* Clock Out Report Modal */}
+      {showClockOutReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 transition-opacity z-[100]" 
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowClockOutReport(false);
+                setClockOutReport('');
+              }
+            }} 
+          />
+          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              (Optional) Provide a brief summary of what you accomplished today before clocking out.
+            </p>
+            <textarea
+              value={clockOutReport}
+              onChange={(e) => setClockOutReport(e.target.value)}
+              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
+              rows="5"
+              autoFocus
+              disabled={isClockOutLoading}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleClockOut(clockOutReport)}
+                disabled={isClockOutLoading}
+                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isClockOutLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-5 h-5" />
+                    Clock Out
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                disabled={isClockOutLoading}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

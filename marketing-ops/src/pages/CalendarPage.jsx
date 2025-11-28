@@ -297,10 +297,11 @@ export default function CalendarPage() {
       {showStatusUpdate && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
             onClick={() => setShowStatusUpdate(null)}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Update Status</h3>
               <button
@@ -372,10 +373,11 @@ export default function CalendarPage() {
       {selectedEntry && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
             onClick={() => setSelectedEntry(null)}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative z-10 animate-fadeIn overflow-y-auto max-h-[90vh]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 relative z-10 animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-2xl font-bold text-gray-900">Asset Details</h3>
               <button

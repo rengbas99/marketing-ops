@@ -11,8 +11,8 @@ export default function ConfirmDialog({ isOpen, onClose, onConfirm, title, messa
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity z-[100]" onClick={onClose} />
-      <div className="glass-card w-full max-w-md p-6 relative z-[101] animate-fadeIn bg-white/95 shadow-2xl">
+      <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={onClose} />
+      <div className="glass-card w-full max-w-md p-6 relative z-[101] animate-fadeIn bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
         <div className="flex items-start gap-4 mb-6">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
             {isDanger ? <AlertTriangle className="w-6 h-6" /> : <Info className="w-6 h-6" />}

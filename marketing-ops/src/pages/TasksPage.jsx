@@ -6,8 +6,9 @@ import BreakDialog from '../components/BreakDialog';
 import BreakTimer from '../components/BreakTimer';
 import WorkLinksModal from '../components/WorkLinksModal';
 import ProgressTracker from '../components/ProgressTracker';
-import { FileEdit, Clock, AlertCircle, Coffee, Link as LinkIcon, CheckCircle, Play, Pause, Users, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileEdit, Clock, AlertCircle, Coffee, Link as LinkIcon, CheckCircle, Play, Pause, Users, X, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import { COLLECTIONS, ROLES, ASSET_STATUS } from '../constants';
+import UpdateAssetModal from '../components/UpdateAssetModal';
 
 export default function TasksPage() {
   const { data, loading, startPolling, stopPolling, updateRow, addRow, forceRefresh } = useData();
@@ -19,6 +20,8 @@ export default function TasksPage() {
   const [showProgressTracker, setShowProgressTracker] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [selectedEditorWorkload, setSelectedEditorWorkload] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [assetToEdit, setAssetToEdit] = useState(null);
 
   useEffect(() => {
     startPolling('tasks-page', [
@@ -503,7 +506,7 @@ export default function TasksPage() {
             </div>
 
             {activeAsset && (
-              <div className="mb-6 bg-white/60 p-4 rounded-xl border border-gray-100 backdrop-blur-sm">
+              <div className="mb-6 bg-white/80 p-4 rounded-xl border border-gray-100">
                 <ProgressTracker
                   currentProgress={activeAsset.work_progress || 0}
                   onUpdate={handleUpdateProgress}
@@ -552,23 +555,41 @@ export default function TasksPage() {
             color="bg-yellow-50/50 border-yellow-100"
             headerColor="bg-yellow-100 text-yellow-800"
             onStartEditing={handleStartEditing}
+            onFinishEditing={handleFinishEditing}
+            activeTimeLog={activeTimeLog}
             data={data}
+            onEdit={(asset) => {
+              setAssetToEdit(asset);
+              setShowEditModal(true);
+            }}
           />
           <KanbanColumn
             title="In Progress"
             assets={assetsByStatus[ASSET_STATUS.IN_PROGRESS]}
             color="bg-blue-50/50 border-blue-100"
             headerColor="bg-blue-100 text-blue-800"
+            onStartEditing={handleStartEditing}
             onFinishEditing={handleFinishEditing}
             activeTimeLog={activeTimeLog}
             data={data}
+            onEdit={(asset) => {
+              setAssetToEdit(asset);
+              setShowEditModal(true);
+            }}
           />
           <KanbanColumn
             title="In Review"
             assets={assetsByStatus[ASSET_STATUS.REVIEW]}
             color="bg-purple-50/50 border-purple-100"
             headerColor="bg-purple-100 text-purple-800"
+            onStartEditing={handleStartEditing}
+            onFinishEditing={handleFinishEditing}
+            activeTimeLog={activeTimeLog}
             data={data}
+            onEdit={(asset) => {
+              setAssetToEdit(asset);
+              setShowEditModal(true);
+            }}
           />
         </div>
       </div>
@@ -576,8 +597,8 @@ export default function TasksPage() {
       {/* Editor Workload Detail Modal */}
       {selectedEditorWorkload && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity z-[100]" onClick={() => setSelectedEditorWorkload(null)} />
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn bg-white rounded-3xl shadow-2xl border border-gray-100 p-6">
+          <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={() => setSelectedEditorWorkload(null)} />
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="sticky top-0 bg-white border-b border-gray-100 pb-4 mb-6 -mx-6 px-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -700,11 +721,31 @@ export default function TasksPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Asset Modal */}
+      {showEditModal && assetToEdit && (
+        <UpdateAssetModal
+          asset={assetToEdit}
+          users={users}
+          shoots={data.Shoots || []}
+          clients={data.Clients || []}
+          onClose={() => {
+            setShowEditModal(false);
+            setAssetToEdit(null);
+          }}
+          onUpdate={async () => {
+            await forceRefresh([COLLECTIONS.ASSETS]);
+            setShowEditModal(false);
+            setAssetToEdit(null);
+            success('Task updated successfully!');
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function KanbanColumn({ title, assets, color, headerColor, onStartEditing, onFinishEditing, activeTimeLog, data }) {
+function KanbanColumn({ title, assets, color, headerColor, onStartEditing, onFinishEditing, activeTimeLog, data, onEdit }) {
   return (
     <div className={`glass-card ${color} p-4 min-w-[300px] md:min-w-0 flex flex-col h-full`}>
       <div className={`${headerColor} rounded-xl px-4 py-3 mb-4 flex items-center justify-between shadow-sm`}>
@@ -727,6 +768,10 @@ function KanbanColumn({ title, assets, color, headerColor, onStartEditing, onFin
                 isActive={isActive}
                 onStartEditing={onStartEditing}
                 onFinishEditing={onFinishEditing}
+                onEdit={(asset) => {
+                  setAssetToEdit(asset);
+                  setShowEditModal(true);
+                }}
                 index={index}
               />
             );
@@ -741,7 +786,7 @@ function KanbanColumn({ title, assets, color, headerColor, onStartEditing, onFin
   );
 }
 
-function AssetCard({ asset, client, isActive, onStartEditing, onFinishEditing, index }) {
+function AssetCard({ asset, client, isActive, onStartEditing, onFinishEditing, onEdit, index }) {
   const isOverdue = asset.deadline && new Date(asset.deadline) < new Date() && asset.status !== ASSET_STATUS.COMPLETED;
 
   return (
@@ -754,9 +799,23 @@ function AssetCard({ asset, client, isActive, onStartEditing, onFinishEditing, i
       )}
 
       <div className="mb-3">
-        <h4 className="font-bold text-gray-900 mb-1 line-clamp-2 leading-tight">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <h4 className="font-bold text-gray-900 line-clamp-2 leading-tight flex-1">
           {asset.title || 'Untitled Asset'}
         </h4>
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(asset);
+              }}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              title="Edit task"
+            >
+              <Edit className="w-4 h-4 text-gray-500" />
+            </button>
+          )}
+        </div>
         {client && (
           <p className="text-xs font-bold text-primary uppercase tracking-wider">
             {client.company_name}
@@ -772,25 +831,27 @@ function AssetCard({ asset, client, isActive, onStartEditing, onFinishEditing, i
         </div>
       )}
 
+      <div className="flex gap-2">
       {asset.status === ASSET_STATUS.TO_EDIT && onStartEditing && (
         <button
           onClick={() => onStartEditing(asset.asset_id)}
-          className="w-full bg-primary text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="flex-1 bg-primary text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 shadow-sm"
         >
           <Play className="w-3.5 h-3.5" />
-          Start Editing
+            Start
         </button>
       )}
 
       {isActive && onFinishEditing && (
         <button
           onClick={() => onFinishEditing(asset.asset_id)}
-          className="w-full bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="flex-1 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
         >
           <CheckCircle className="w-3.5 h-3.5" />
-          Finish & Review
+            Finish
         </button>
       )}
+      </div>
     </div>
   );
 }

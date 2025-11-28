@@ -28,8 +28,8 @@ export default function WorkLinksModal({ isOpen, onClose, onSave, existingLinks 
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity z-[100]" onClick={onClose} />
-      <div className="glass-card w-full max-w-2xl p-6 relative z-[101] animate-fadeIn max-h-[90vh] overflow-y-auto bg-white/95 shadow-2xl">
+      <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={onClose} />
+      <div className="glass-card w-full max-w-2xl p-6 relative z-[101] animate-fadeIn max-h-[90vh] overflow-y-auto bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">

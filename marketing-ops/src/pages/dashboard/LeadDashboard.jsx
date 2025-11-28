@@ -10,7 +10,7 @@ import SubTaskWidget from '../../components/SubTaskWidget';
 import UpdateShootModal from '../../components/UpdateShootModal';
 import UpdateAssetModal from '../../components/UpdateAssetModal';
 import AssetWorkDetailsModal from '../../components/AssetWorkDetailsModal';
-import { Users, Camera, FileEdit, Calendar, Plus, Clock, LogIn, LogOut, Coffee, FileText, MapPin, AlertCircle, Eye, Edit, Plane } from 'lucide-react';
+import { Users, Camera, FileEdit, Calendar, Plus, Clock, LogIn, LogOut, Coffee, FileText, MapPin, AlertCircle, Eye, Edit, Plane, X } from 'lucide-react';
 import { formatBreakDuration, formatTime as formatTimeUtil } from '../../utils/timeFormatting';
 import { COLLECTIONS, SHOOT_STATUS, ASSET_STATUS } from '../../constants';
 
@@ -25,6 +25,8 @@ export default function LeadDashboard() {
   const [elapsedTime, setElapsedTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
+  const [showClockOutReport, setShowClockOutReport] = useState(false);
+  const [clockOutReport, setClockOutReport] = useState('');
   const [activeBreak, setActiveBreak] = useState(null);
   const [showBreakDialog, setShowBreakDialog] = useState(false);
   const [selectedShoot, setSelectedShoot] = useState(null);
@@ -204,11 +206,21 @@ export default function LeadDashboard() {
     }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOutClick = () => {
+    setShowClockOutReport(true);
+  };
+
+  const handleClockOut = async (reportText = '') => {
     if (!todayAttendance) return;
     setIsClockOutLoading(true);
     try {
-      if (activeBreak) await handleEndBreak();
+      if (activeBreak) {
+        try {
+          await handleEndBreak();
+        } catch (breakErr) {
+          console.error('Error ending break:', breakErr);
+        }
+      }
 
       const index = attendance.findIndex(
         a => a && a.attendance_id === todayAttendance.attendance_id
@@ -230,13 +242,23 @@ export default function LeadDashboard() {
           clock_out: clockOutTime.toISOString(),
           status: 'clocked_out',
           hours_worked: hoursWorkedExcludingBreaks.toFixed(2),
+          daily_report: reportText || todayAttendance.daily_report || '',
         });
-        await forceRefresh([COLLECTIONS.ATTENDANCE]);
+        
+        forceRefresh([COLLECTIONS.ATTENDANCE]).catch(err => {
+          console.error('Error refreshing data:', err);
+        });
+        
         setClockedIn(false);
+        setShowClockOutReport(false);
+        setClockOutReport('');
         success('Clocked out successfully!');
       }
     } catch (err) {
-      error('Error clocking out: ' + err.message);
+      console.error('Clock out error:', err);
+      error('Error clocking out: ' + (err.message || 'Unknown error'));
+      setShowClockOutReport(false);
+      setClockOutReport('');
     } finally {
       setIsClockOutLoading(false);
     }
@@ -269,10 +291,15 @@ export default function LeadDashboard() {
         a => a && a.attendance_id === todayAttendance.attendance_id
       );
       if (attIndex !== -1) {
-        await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
-          ...todayAttendance,
-          break_start_time: new Date().toISOString(),
-        });
+        try {
+          await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
+            ...todayAttendance,
+            break_start_time: new Date().toISOString(),
+          });
+        } catch (attErr) {
+          // Log error but don't block break start - attendance record might not exist in Sheets
+          console.error('Error updating attendance for break:', attErr);
+        }
       }
       await forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.TIME_BREAKS]);
       success(`Break started (${breakType})`);
@@ -494,16 +521,12 @@ export default function LeadDashboard() {
                 </button>
               )}
               <button
-                onClick={handleClockOut}
+                onClick={handleClockOutClick}
                 disabled={isClockOutLoading}
                 className="flex-1 bg-red-50 text-red-600 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-50"
               >
-                {isClockOutLoading ? 'Processing...' : (
-                  <>
                     <LogOut className="w-4 h-4" />
                     Clock Out
-                  </>
-                )}
               </button>
             </div>
           </div>
@@ -565,14 +588,27 @@ export default function LeadDashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          icon={Clock}
-          label="Active Attendance"
-          value={activeAttendance.length || 0}
-          color="text-green-600"
-          bg="bg-green-50"
-          route="/dashboard/attendance"
-        />
+        <div 
+          onClick={() => navigate('/dashboard/attendance')}
+          className="glass-card p-6 cursor-pointer hover:shadow-lg transition-all group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className={`p-3 rounded-xl bg-green-50 group-hover:bg-green-100 transition-colors`}>
+              <Clock className="w-6 h-6 text-green-600" />
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/dashboard/attendance?view=personal');
+              }}
+              className="px-3 py-1 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-bold"
+            >
+              My Attendance
+            </button>
+          </div>
+          <div className="text-3xl font-bold text-gray-900 mb-1">{activeAttendance.length || 0}</div>
+          <div className="text-sm text-gray-500 font-medium">Active Attendance</div>
+        </div>
         <StatCard
           icon={Users}
           label="Total Clients"
@@ -798,6 +834,77 @@ export default function LeadDashboard() {
             setSelectedAssetForDetails(null);
           }}
         />
+      )}
+
+      {/* Clock Out Report Modal */}
+      {showClockOutReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 transition-opacity z-[100]" 
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowClockOutReport(false);
+                setClockOutReport('');
+              }
+            }} 
+          />
+          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              (Optional) Provide a brief summary of what you accomplished today before clocking out.
+            </p>
+            <textarea
+              value={clockOutReport}
+              onChange={(e) => setClockOutReport(e.target.value)}
+              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
+              rows="5"
+              autoFocus
+              disabled={isClockOutLoading}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleClockOut(clockOutReport)}
+                disabled={isClockOutLoading}
+                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isClockOutLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-5 h-5" />
+                    Clock Out
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                disabled={isClockOutLoading}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -143,10 +143,10 @@ export default function LeavePage() {
             {(isManager || isLead) ? 'Review and manage leave requests' : 'Request and track your leave'}
           </p>
         </div>
-        {!isManager && (
+        {(user?.role === ROLES.EDITOR || user?.role === ROLES.PHOTOGRAPHER || user?.role === ROLES.CONTENT_CREATOR || user?.role === ROLES.LEAD) && (
           <button
             onClick={() => setShowForm(!showForm)}
-            className="glass-button bg-primary text-white hover:bg-primary-dark"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
           >
             {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
             <span>{showForm ? 'Cancel Request' : 'Request Leave'}</span>
@@ -209,7 +209,7 @@ export default function LeavePage() {
             <div className="flex gap-4 pt-2">
               <button
                 type="submit"
-                className="flex-1 bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/30"
+                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Submit Request
               </button>

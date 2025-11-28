@@ -12,6 +12,7 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import { FileEdit, Clock, CheckCircle, AlertCircle, AlertTriangle, Coffee, Link as LinkIcon, LogIn, LogOut, X, Play, Plane } from 'lucide-react';
 import { formatBreakDuration, calculateTotalBreakDuration } from '../../utils/timeFormatting';
 import { COLLECTIONS, ASSET_STATUS } from '../../constants';
+import { canClockIn } from '../../utils/attendanceUtils';
 
 export default function EditorDashboard() {
   const { data, loading, startPolling, stopPolling, updateRow, addRow, forceRefresh } = useData();
@@ -31,6 +32,9 @@ export default function EditorDashboard() {
   const [elapsedTime, setElapsedTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
+  // Clock-out report state - MUST be defined at component level before any early returns
+  const [showClockOutReport, setShowClockOutReport] = useState(false);
+  const [clockOutReport, setClockOutReport] = useState('');
 
   useEffect(() => {
     startPolling('editor-dashboard', [
@@ -145,7 +149,7 @@ export default function EditorDashboard() {
   };
 
   const handleClockIn = async () => {
-    if (clockedIn && todayAttendance && todayAttendance.status === 'clocked_in') {
+    if (clockedIn && todayAttendance && todayAttendance.status === 'clocked_in' && !todayAttendance.clock_out) {
       error('You are already clocked in!');
       return;
     }
@@ -156,6 +160,35 @@ export default function EditorDashboard() {
       const today = new Date().toISOString().split('T')[0];
       const asset = selectedAssetForClockIn ? assignedAssets.find(a => a && a.asset_id === selectedAssetForClockIn) : null;
       const shootId = asset?.shoot_id || asset?.linked_shoot_id || null;
+
+      // Use utility function to check if can clock in
+      const clockInCheck = canClockIn(attendance, user?.email, today);
+      
+      if (!clockInCheck.canClockIn && clockInCheck.reason === 'already_clocked_in') {
+        error('You already have an active clock-in session. Please clock out first.');
+        setIsClockInLoading(false);
+        return;
+      }
+
+      // If there's a stale record that needs auto clock-out, do it first
+      if (clockInCheck.reason === 'auto_clockout_needed' && clockInCheck.existingRecord) {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === clockInCheck.existingRecord.attendance_id);
+        if (staleIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTimeStale = new Date(clockInCheck.existingRecord.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTimeStale) / (1000 * 60);
+          const hoursWorked = totalMinutes / 60;
+          
+          await updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+            ...clockInCheck.existingRecord,
+            clock_out: clockOutTime,
+            status: 'clocked_out',
+            hours_worked: hoursWorked.toFixed(2),
+            daily_report: clockInCheck.existingRecord.daily_report || 'Auto clocked out after 15 hours',
+          });
+          await forceRefresh([COLLECTIONS.ATTENDANCE]);
+        }
+      }
 
       const existingAttendance = attendance.find(
         a => a && a.employee_id === user?.email && a.date === today
@@ -273,27 +306,30 @@ export default function EditorDashboard() {
     }
   };
 
-  const handleClockOut = async () => {
+  const handleClockOutClick = () => {
+    setShowClockOutReport(true);
+  };
+
+  const handleClockOut = async (reportText = '') => {
     if (!todayAttendance) return;
     setIsClockOutLoading(true);
 
-    if (activeBreak) {
-      try {
-        await handleEndBreak();
-      } catch (err) {
-        console.error('Error ending break before clock-out:', err);
-      }
-    }
-
-    const clockOutTime = new Date();
-    const clockInTime = new Date(todayAttendance.clock_in);
-    const hoursWorked = (clockOutTime - clockInTime) / (1000 * 60 * 60);
-    const hours = Math.floor(hoursWorked);
-    const minutes = Math.floor((hoursWorked - hours) * 60);
-
     try {
-      const clockOutTimeISO = clockOutTime.toISOString();
+      if (activeBreak) {
+        try {
+          await handleEndBreak();
+        } catch (err) {
+          console.error('Error ending break before clock-out:', err);
+        }
+      }
 
+      const clockOutTime = new Date();
+      const clockInTime = new Date(todayAttendance.clock_in);
+      const hoursWorked = (clockOutTime - clockInTime) / (1000 * 60 * 60);
+      const hours = Math.floor(hoursWorked);
+      const minutes = Math.floor((hoursWorked - hours) * 60);
+
+      const clockOutTimeISO = clockOutTime.toISOString();
       let totalBreakMinutes = 0;
       if (activeTimeLog) {
         const timeLogBreaks = calculateTotalBreakDuration(breaks, activeTimeLog.log_id, null);
@@ -331,6 +367,7 @@ export default function EditorDashboard() {
           clock_out: clockOutTimeISO,
           status: 'clocked_out',
           hours_worked: hoursWorkedExcludingBreaks.toFixed(2),
+          daily_report: reportText || todayAttendance.daily_report || '',
         });
       }
 
@@ -367,16 +404,24 @@ export default function EditorDashboard() {
         }
       }
 
-      await forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.EDITOR_TIME_LOGS, COLLECTIONS.ASSETS]);
+      forceRefresh([COLLECTIONS.ATTENDANCE, COLLECTIONS.EDITOR_TIME_LOGS, COLLECTIONS.ASSETS]).catch(err => {
+        console.error('Error refreshing data:', err);
+      });
 
       setClockedIn(false);
       setActiveTimeLog(null);
       setActiveBreak(null);
+      setShowClockOutReport(false);
+      setClockOutReport('');
+      
       const workHours = Math.floor(hoursWorkedExcludingBreaks);
       const workMins = Math.floor((hoursWorkedExcludingBreaks - workHours) * 60);
       success(`Clocked out! You worked ${workHours}h ${workMins}m today (excluding ${formatBreakDuration(totalBreakMinutes)} break time).`);
     } catch (err) {
-      error('Error clocking out: ' + err.message);
+      console.error('Clock out error:', err);
+      error('Error clocking out: ' + (err.message || 'Unknown error'));
+      setShowClockOutReport(false);
+      setClockOutReport('');
     } finally {
       setIsClockOutLoading(false);
     }
@@ -567,10 +612,15 @@ export default function EditorDashboard() {
           a => a && a.attendance_id === todayAttendance.attendance_id
         );
         if (attIndex !== -1) {
-          await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
-            ...todayAttendance,
-            break_start_time: new Date().toISOString(),
-          });
+          try {
+            await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
+              ...todayAttendance,
+              break_start_time: new Date().toISOString(),
+            });
+          } catch (attErr) {
+            // Log error but don't block break start - attendance record might not exist in Sheets
+            console.error('Error updating attendance for break:', attErr);
+          }
         }
       }
 
@@ -826,8 +876,13 @@ export default function EditorDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
-          onClick={() => navigate('/dashboard/leave-requests')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate('/dashboard/leave-requests');
+          }}
+          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80 cursor-pointer transition-all"
+          type="button"
         >
           <div className="p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
             <Plane className="w-8 h-8 text-orange-600" />
@@ -941,16 +996,12 @@ export default function EditorDashboard() {
                 </button>
               )}
               <button
-                onClick={handleClockOut}
+                onClick={handleClockOutClick}
                 disabled={isClockOutLoading}
                 className="flex-1 bg-red-50 text-red-600 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-50"
               >
-                {isClockOutLoading ? 'Processing...' : (
-                  <>
-                    <LogOut className="w-4 h-4" />
-                    Clock Out
-                  </>
-                )}
+                <LogOut className="w-4 h-4" />
+                Clock Out
               </button>
             </div>
 
@@ -982,13 +1033,14 @@ export default function EditorDashboard() {
       {showAssetSelector && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
             onClick={() => {
               setShowAssetSelector(false);
               setSelectedAssetForClockIn('');
             }}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Select Task</h3>
               <button
@@ -1190,6 +1242,77 @@ function TaskCard({ asset, client, onStart, isActive, isClockedIn, activeTimeLog
             // For now, we'll leave it as optional
           }}
         />
+      )}
+
+      {/* Clock Out Report Modal */}
+      {showClockOutReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 transition-opacity" 
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowClockOutReport(false);
+                setClockOutReport('');
+              }
+            }} 
+          />
+          <div className="w-full max-w-md relative z-[111] animate-fadeIn bg-white rounded-2xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              (Optional) Provide a brief summary of what you accomplished today before clocking out.
+            </p>
+            <textarea
+              value={clockOutReport}
+              onChange={(e) => setClockOutReport(e.target.value)}
+              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
+              rows="5"
+              autoFocus
+              disabled={isClockOutLoading}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleClockOut(clockOutReport)}
+                disabled={isClockOutLoading}
+                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isClockOutLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-5 h-5" />
+                    Clock Out
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowClockOutReport(false);
+                  setClockOutReport('');
+                }}
+                disabled={isClockOutLoading}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

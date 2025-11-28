@@ -33,8 +33,8 @@ export default function AssetWorkDetailsModal({ asset, timeLogs, onClose }) {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]" onClick={onClose} />
-            <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto relative z-[101] bg-white rounded-3xl shadow-2xl border border-gray-100 p-6">
+            <div className="fixed inset-0 z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={onClose} />
+            <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto relative z-[101] bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">{asset.title}</h2>

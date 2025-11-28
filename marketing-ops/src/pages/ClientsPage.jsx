@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
-import { Plus, Mail, Phone, Calendar, FileText, TrendingUp, Camera, Users, MapPin, Search, Edit, X } from 'lucide-react';
+import { Plus, Mail, Phone, Calendar, FileText, TrendingUp, Camera, Users, MapPin, Search, Edit, X, Trash2, AlertTriangle } from 'lucide-react';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { COLLECTIONS, ROLES, SHOOT_STATUS, ASSET_STATUS } from '../constants';
 
 export default function ClientsPage() {
-  const { data, loading, startPolling, stopPolling, addRow, updateRow, forceRefresh } = useData();
+  const { data, loading, startPolling, stopPolling, addRow, updateRow, deleteRow, forceRefresh } = useData();
   const { user } = useAuth();
   const { success, error } = useToast();
   const [selectedClient, setSelectedClient] = useState(null);
@@ -14,6 +15,8 @@ export default function ClientsPage() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState(null);
   const [newClient, setNewClient] = useState({
     company_name: '',
     contact_name: '',
@@ -123,6 +126,62 @@ export default function ClientsPage() {
       }
     } catch (err) {
       error('Error updating client: ' + err.message);
+    }
+  };
+
+  const handleDeleteClient = () => {
+    if (!selectedClient) return;
+    setClientToDelete(selectedClient);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteClient = async () => {
+    if (!clientToDelete) return;
+
+    try {
+      // Check if client has related shoots or assets
+      const clientShoots = data.Shoots?.filter(s => s.client_id === clientToDelete.client_id) || [];
+      const clientAssets = data.Assets?.filter(a => {
+        const shoot = data.Shoots?.find(s => s.shoot_id === a.shoot_id);
+        return shoot?.client_id === clientToDelete.client_id;
+      }) || [];
+      
+      const hasShoots = clientShoots.length > 0;
+      const hasAssets = clientAssets.length > 0;
+
+      if (hasShoots || hasAssets) {
+        const warning = `This client has ${clientShoots.length} shoot(s) and ${clientAssets.length} asset(s) associated with it. Are you sure you want to delete?`;
+        if (!confirm(warning)) {
+          setShowDeleteConfirm(false);
+          setClientToDelete(null);
+          return;
+        }
+      }
+
+      const clientIndex = data.Clients?.findIndex(c => c && c.client_id === clientToDelete.client_id);
+      if (clientIndex !== -1) {
+        // Delete from database
+        await deleteRow(COLLECTIONS.CLIENTS, clientIndex + 2);
+        
+        // Select another client if available
+        const remainingClients = data.Clients?.filter(c => c && c.client_id !== clientToDelete.client_id) || [];
+        if (remainingClients.length > 0) {
+          setSelectedClient(remainingClients[0]);
+        } else {
+          setSelectedClient(null);
+        }
+
+        setShowDeleteConfirm(false);
+        setClientToDelete(null);
+        
+        await forceRefresh([COLLECTIONS.CLIENTS]);
+        success('Client deleted successfully!');
+      }
+    } catch (err) {
+      console.error('Error deleting client:', err);
+      error('Error deleting client: ' + err.message);
+      setShowDeleteConfirm(false);
+      setClientToDelete(null);
     }
   };
 
@@ -417,6 +476,7 @@ export default function ClientsPage() {
                   {selectedClient.company_name}
                 </h2>
                 {(user?.role === ROLES.LEAD || user?.role === ROLES.MANAGER || user?.role === ROLES.CONTENT_CREATOR || user?.role === 'sales') && (
+                  <div className="flex items-center gap-2">
                   <button
                     onClick={handleEditClient}
                     className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -424,6 +484,14 @@ export default function ClientsPage() {
                   >
                     <Edit className="w-5 h-5" />
                   </button>
+                    <button
+                      onClick={handleDeleteClient}
+                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Client"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -596,6 +664,58 @@ export default function ClientsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setClientToDelete(null);
+        }}
+        onConfirm={confirmDeleteClient}
+        title="Delete Client"
+        message={
+          clientToDelete ? (
+            <div>
+              <p className="mb-3">
+                Are you sure you want to delete <strong>{clientToDelete.company_name}</strong>?
+              </p>
+              {(() => {
+                const clientShoots = clientToDelete ? (data.Shoots?.filter(s => s.client_id === clientToDelete.client_id) || []) : [];
+                const clientAssets = clientToDelete ? (data.Assets?.filter(a => {
+                  const shoot = data.Shoots?.find(s => s.shoot_id === a.shoot_id);
+                  return shoot?.client_id === clientToDelete.client_id;
+                }) || []) : [];
+                
+                return (clientShoots.length > 0 || clientAssets.length > 0) && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-bold mb-1">Warning:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {clientShoots.length > 0 && (
+                            <li>This client has {clientShoots.length} associated shoot(s)</li>
+                          )}
+                          {clientAssets.length > 0 && (
+                            <li>This client has {clientAssets.length} associated asset(s)</li>
+                          )}
+                        </ul>
+                        <p className="mt-2">Deleting this client will not delete the shoots or assets, but they will no longer be associated with a client.</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              <p className="mt-3 text-red-600 font-bold">This action cannot be undone.</p>
+            </div>
+          ) : (
+            'Are you sure you want to delete this client?'
+          )
+        }
+        confirmText="Delete"
+        confirmColor="bg-red-600 hover:bg-red-700"
+      />
     </div>
   );
 }

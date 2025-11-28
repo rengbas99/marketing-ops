@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
@@ -7,6 +7,7 @@ import { User, Calendar, FileText, CheckCircle, Clock, TrendingUp, Camera, MapPi
 import { COLLECTIONS, ROLES, SHOOT_STATUS, ASSET_STATUS } from '../constants';
 
 export default function AssignTasksPage() {
+  const navigate = useNavigate();
   const { data, loading, startPolling, stopPolling, updateRow, addRow, forceRefresh } = useData();
   const { user } = useAuth();
   const { success, error } = useToast();
@@ -15,6 +16,8 @@ export default function AssignTasksPage() {
   const [selectedEditor, setSelectedEditor] = useState('');
   const [deadline, setDeadline] = useState('');
   const [fileLink, setFileLink] = useState('');
+  const [showAssignToEditor, setShowAssignToEditor] = useState(false);
+  const [editorToAssign, setEditorToAssign] = useState(null);
   const [showShootAssignment, setShowShootAssignment] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [isCreatingShoot, setIsCreatingShoot] = useState(false);
@@ -176,6 +179,37 @@ export default function AssignTasksPage() {
         setFileLink('');
 
         await forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.CONTENT_CALENDAR]);
+      }
+    } catch (err) {
+      error('Error assigning task: ' + err.message);
+    }
+  };
+
+  const handleAssignTaskToEditor = async () => {
+    if (!selectedAsset || !editorToAssign) {
+      error('Please select an asset');
+      return;
+    }
+
+    try {
+      const assetIndex = assets.findIndex(a => a && a.asset_id === selectedAsset.asset_id);
+      if (assetIndex !== -1) {
+        await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
+          ...selectedAsset,
+          assigned_editor_email: editorToAssign.email,
+          status: ASSET_STATUS.TO_EDIT,
+          deadline: deadline || selectedAsset.deadline,
+          upload_folder_link: fileLink || selectedAsset.upload_folder_link,
+        });
+
+        success(`Task assigned to ${editorToAssign.name || editorToAssign.email}`);
+        setSelectedAsset(null);
+        setEditorToAssign(null);
+        setShowAssignToEditor(false);
+        setDeadline('');
+        setFileLink('');
+
+        forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.CONTENT_CALENDAR]).catch(console.error);
       }
     } catch (err) {
       error('Error assigning task: ' + err.message);
@@ -361,22 +395,26 @@ export default function AssignTasksPage() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Task Assignment</h1>
           <p className="text-gray-600">Assign shoots to photographers and create/assign tasks to editors</p>
         </div>
+        {(user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD || user?.role === ROLES.CONTENT_CREATOR) && (
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => setShowCreateTask(true)}
-            className="glass-button bg-green-600 text-white hover:bg-green-700 border-none flex items-center gap-2"
+              className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors flex items-center gap-2 shadow-lg shadow-green-600/30"
           >
             <Plus className="w-4 h-4" />
             Create Task
           </button>
+            {user?.role !== ROLES.EDITOR && (
           <button
             onClick={() => setShowShootAssignment(true)}
-            className="glass-button bg-primary text-white hover:bg-primary-dark border-none flex items-center gap-2"
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/30"
           >
             <Camera className="w-4 h-4" />
             Assign Shoot
           </button>
+            )}
         </div>
+        )}
       </div>
 
       {/* Unassigned Assets */}
@@ -460,7 +498,11 @@ export default function AssignTasksPage() {
           {availableEditors.map((editor, index) => {
             const workload = getEditorWorkload(editor.email);
             const editorAssets = assets.filter(
-              a => a && a.assigned_editor_email === editor.email && a.status !== ASSET_STATUS.COMPLETED
+              a => a && a.assigned_editor_email === editor.email && 
+              a.status !== ASSET_STATUS.COMPLETED && 
+              a.status !== ASSET_STATUS.FINAL && 
+              a.status !== 'Published' && 
+              a.status !== ASSET_STATUS.CANCELLED
             );
 
             return (
@@ -549,6 +591,27 @@ export default function AssignTasksPage() {
                         )}
                       </button>
                     )}
+                    <div className="flex flex-col gap-2 mt-2">
+                      {(user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD || user?.role === ROLES.CONTENT_CREATOR) && unassignedAssets.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setEditorToAssign(editor);
+                            setShowAssignToEditor(true);
+                          }}
+                          className="w-full text-xs text-green-600 text-center font-bold hover:text-green-700 transition-colors py-2 px-3 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200"
+                        >
+                          Assign Task
+                        </button>
+                      )}
+                      {editorAssets.length > 0 && (
+                        <button
+                          onClick={() => navigate('/dashboard/editor-task-history')}
+                          className="w-full text-xs text-blue-600 text-center font-bold hover:text-blue-700 transition-colors py-2 px-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200"
+                        >
+                          View Completed Tasks
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -561,10 +624,11 @@ export default function AssignTasksPage() {
       {selectedAsset && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
             onClick={() => setSelectedAsset(null)}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Assign Task</h3>
               <button
@@ -661,10 +725,11 @@ export default function AssignTasksPage() {
       {showShootAssignment && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
             onClick={() => setShowShootAssignment(false)}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
               <button
@@ -780,10 +845,11 @@ export default function AssignTasksPage() {
       {showCreateTask && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity z-[100]"
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
             onClick={() => setShowCreateTask(false)}
           />
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Create New Task</h3>
               <button
@@ -916,6 +982,129 @@ export default function AssignTasksPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Task to Editor Modal */}
+      {showAssignToEditor && editorToAssign && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
+            onClick={() => {
+              setShowAssignToEditor(false);
+              setEditorToAssign(null);
+              setSelectedAsset(null);
+              setDeadline('');
+              setFileLink('');
+            }}
+          />
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-start justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Assign Task to {editorToAssign.name || editorToAssign.email}</h3>
+              <button
+                onClick={() => {
+                  setShowAssignToEditor(false);
+                  setEditorToAssign(null);
+                  setSelectedAsset(null);
+                  setDeadline('');
+                  setFileLink('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Assigning To</p>
+              <p className="font-bold text-gray-900">{editorToAssign.name || editorToAssign.email}</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Asset *</label>
+                <select
+                  value={selectedAsset?.asset_id || ''}
+                  onChange={(e) => {
+                    const asset = unassignedAssets.find(a => a && a.asset_id === e.target.value);
+                    setSelectedAsset(asset || null);
+                  }}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">Select an unassigned asset...</option>
+                  {unassignedAssets.map(asset => {
+                    const shoot = shoots.find(s => s && s.shoot_id === asset.shoot_id);
+                    const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
+                    return (
+                      <option key={asset.asset_id} value={asset.asset_id}>
+                        {asset.title} {client ? `(${client.company_name})` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {selectedAsset && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Selected Asset</p>
+                  <p className="font-bold text-gray-900">{selectedAsset.title}</p>
+                  {(() => {
+                    const shoot = shoots.find(s => s && s.shoot_id === selectedAsset.shoot_id);
+                    const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
+                    return client && (
+                      <p className="text-sm text-primary mt-1">{client.company_name}</p>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Deadline *</label>
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">File Link (Optional)</label>
+                <input
+                  type="url"
+                  value={fileLink}
+                  onChange={(e) => setFileLink(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => {
+                  setShowAssignToEditor(false);
+                  setEditorToAssign(null);
+                  setSelectedAsset(null);
+                  setDeadline('');
+                  setFileLink('');
+                }}
+                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignTaskToEditor}
+                disabled={!selectedAsset || !deadline}
+                className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50"
+              >
+                Assign Task
+              </button>
+            </div>
           </div>
         </div>
       )}

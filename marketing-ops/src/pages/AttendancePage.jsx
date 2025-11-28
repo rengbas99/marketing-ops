@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
+import LeadAttendanceDashboard from './LeadAttendanceDashboard';
 import { Clock, Calendar, TrendingUp, User, LogIn, LogOut, Edit2, X, ChevronLeft, ChevronRight, BarChart3, CheckCircle, FileText, Eye } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES } from '../constants';
+import { canClockIn, findDuplicateClockIns, findStaleClockIns, shouldAutoClockOut } from '../utils/attendanceUtils';
 
 export default function AttendancePage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data, loading, startPolling, stopPolling, addRow, updateRow, forceRefresh } = useData();
   const { user } = useAuth();
   const { success, error } = useToast();
@@ -15,9 +20,20 @@ export default function AttendancePage() {
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [viewMode, setViewMode] = useState(() => {
-    // Managers and leads can view team by default
-    return (user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD) ? 'team' : 'personal';
+    // Check URL parameter first
+    const viewParam = searchParams.get('view');
+    if (viewParam === 'personal') return 'personal';
+    // Leads/Managers default to daily status dashboard
+    return (user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD) ? 'daily-status' : 'personal';
   });
+
+  // Update view mode when URL parameter changes
+  useEffect(() => {
+    const viewParam = searchParams.get('view');
+    if (viewParam === 'personal' && viewMode !== 'personal') {
+      setViewMode('personal');
+    }
+  }, [searchParams, viewMode]);
   const [elapsedTime, setElapsedTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [editingAttendance, setEditingAttendance] = useState(null);
   const [editClockOut, setEditClockOut] = useState('');
@@ -50,11 +66,97 @@ export default function AttendancePage() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
+    
+    // Check for and clean duplicate clock-ins
+    const duplicates = findDuplicateClockIns(attendance, user?.email, today);
+    if (duplicates.length > 0) {
+      console.warn(`Found ${duplicates.length} duplicate clock-in records. Cleaning up...`);
+      // Auto clock-out duplicates (keep only the first one)
+      duplicates.forEach(async (dup) => {
+        const dupIndex = attendance.findIndex(a => a && a.attendance_id === dup.attendance_id);
+        if (dupIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTime = new Date(dup.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTime) / (1000 * 60);
+          const hoursWorked = totalMinutes / 60;
+          
+          try {
+            await updateRow(COLLECTIONS.ATTENDANCE, dupIndex + 2, {
+              ...dup,
+              clock_out: clockOutTime,
+              status: 'clocked_out',
+              hours_worked: hoursWorked.toFixed(2),
+              daily_report: dup.daily_report || 'Auto clocked out (duplicate record)',
+            });
+          } catch (err) {
+            console.error('Error cleaning duplicate clock-in:', err);
+          }
+        }
+      });
+      forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
+    }
+
+    // Check for stale clock-ins (over 15 hours) and auto clock-out
+    const staleClockIns = findStaleClockIns(attendance.filter(a => a && a.employee_id === user?.email));
+    if (staleClockIns.length > 0) {
+      staleClockIns.forEach(async (stale) => {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === stale.attendance_id);
+        if (staleIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTime = new Date(stale.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTime) / (1000 * 60);
+          const hoursWorked = totalMinutes / 60;
+          
+          try {
+            await updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+              ...stale,
+              clock_out: clockOutTime,
+              status: 'clocked_out',
+              hours_worked: hoursWorked.toFixed(2),
+              daily_report: stale.daily_report || 'Auto clocked out after 15 hours',
+            });
+            if (stale.employee_id === user?.email) {
+              setClockedIn(false);
+            }
+          } catch (err) {
+            console.error('Error auto clocking out stale record:', err);
+          }
+        }
+      });
+      forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
+    }
+
     const todayAtt = attendance.find(
       a => a && a.employee_id === user?.email && a.date === today
     );
+    
+    // Check if the found attendance should be auto clocked out
+    if (todayAtt && shouldAutoClockOut(todayAtt)) {
+      const staleIndex = attendance.findIndex(a => a && a.attendance_id === todayAtt.attendance_id);
+      if (staleIndex !== -1) {
+        const clockOutTime = new Date().toISOString();
+        const clockInTime = new Date(todayAtt.clock_in);
+        const totalMinutes = (new Date(clockOutTime) - clockInTime) / (1000 * 60);
+        const hoursWorked = totalMinutes / 60;
+        
+        updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+          ...todayAtt,
+          clock_out: clockOutTime,
+          status: 'clocked_out',
+          hours_worked: hoursWorked.toFixed(2),
+          daily_report: todayAtt.daily_report || 'Auto clocked out after 15 hours',
+        }).then(() => {
+          forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
+        }).catch(console.error);
+        
+        setClockedIn(false);
+        setTodayAttendance(null);
+        return;
+      }
+    }
+    
     setTodayAttendance(todayAtt);
-    setClockedIn(todayAtt && todayAtt.status === 'clocked_in');
+    setClockedIn(todayAtt && todayAtt.status === 'clocked_in' && !todayAtt.clock_out);
 
     if (todayAtt && todayAtt.attendance_id) {
       const activeBreakRecord = breaks.find(
@@ -64,7 +166,7 @@ export default function AttendancePage() {
     } else {
       setActiveBreak(null);
     }
-  }, [data, user, attendance, breaks]);
+  }, [data, user, attendance, breaks, updateRow, forceRefresh]);
 
   useEffect(() => {
     if (!clockedIn || !todayAttendance || !todayAttendance.clock_in) {
@@ -95,7 +197,7 @@ export default function AttendancePage() {
   }, [clockedIn, todayAttendance]);
 
   const handleClockIn = async () => {
-    if (clockedIn && todayAttendance && todayAttendance.status === 'clocked_in') {
+    if (clockedIn && todayAttendance && todayAttendance.status === 'clocked_in' && !todayAttendance.clock_out) {
       error('You are already clocked in!');
       return;
     }
@@ -104,6 +206,35 @@ export default function AttendancePage() {
     try {
       const clockInTime = new Date().toISOString();
       const today = new Date().toISOString().split('T')[0];
+
+      // Use utility function to check if can clock in
+      const { canClockIn: canClockInCheck, reason, existingRecord } = canClockIn(attendance, user?.email, today);
+      
+      if (!canClockInCheck && reason === 'already_clocked_in') {
+        error('You already have an active clock-in session. Please clock out first.');
+        setIsClockInLoading(false);
+        return;
+      }
+
+      // If there's a stale record that needs auto clock-out, do it first
+      if (reason === 'auto_clockout_needed' && existingRecord) {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === existingRecord.attendance_id);
+        if (staleIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTimeStale = new Date(existingRecord.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTimeStale) / (1000 * 60);
+          const hoursWorked = totalMinutes / 60;
+          
+          await updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+            ...existingRecord,
+            clock_out: clockOutTime,
+            status: 'clocked_out',
+            hours_worked: hoursWorked.toFixed(2),
+            daily_report: existingRecord.daily_report || 'Auto clocked out after 15 hours',
+          });
+          await forceRefresh([COLLECTIONS.ATTENDANCE]);
+        }
+      }
 
       const existingAttendance = attendance.find(
         a => a && a.employee_id === user?.email && a.date === today
@@ -500,12 +631,17 @@ export default function AttendancePage() {
       return [user];
     }
 
-    // Managers and leads can view team attendance
+    // For daily-status view, show all team members (handled by LeadAttendanceDashboard component)
+    if (viewMode === 'daily-status') {
+      return [];
+    }
+
+    // Managers and leads can view team attendance history
     if (user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD) {
       return users.filter(u => u && u.active !== 'FALSE' && u.active !== false);
     }
 
-    // Leads and others can only view their own attendance
+    // Others can only view their own attendance
     return [];
   };
 
@@ -524,6 +660,11 @@ export default function AttendancePage() {
   const canViewTeam = isManager || isLead; // Managers and leads can view team attendance
   const canEditAttendance = isManager || isLead; // Managers and leads can edit others' attendance
 
+  // Show Daily Status Dashboard for Leads/Managers when in daily-status mode
+  if (canViewTeam && viewMode === 'daily-status') {
+    return <LeadAttendanceDashboard />;
+  }
+
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
@@ -538,28 +679,37 @@ export default function AttendancePage() {
         {/* View Mode Toggle */}
         {canViewTeam && (
           <div className="flex items-center gap-3">
-            <div className="glass-panel p-1 flex gap-1">
-              <button
-                onClick={() => setViewMode('personal')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'personal'
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-gray-500 hover:bg-gray-100'
-                  }`}
-              >
-                My Attendance
-              </button>
-              <button
-                onClick={() => setViewMode('team')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'team'
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-gray-500 hover:bg-gray-100'
-                  }`}
-              >
-                Team Attendance
-              </button>
+          <div className="glass-panel p-1 flex gap-1">
+            <button
+              onClick={() => setViewMode('daily-status')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'daily-status'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-gray-500 hover:bg-gray-100'
+                }`}
+            >
+              Daily Status
+            </button>
+            <button
+              onClick={() => setViewMode('personal')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'personal'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-gray-500 hover:bg-gray-100'
+                }`}
+            >
+              My Attendance
+            </button>
+            <button
+              onClick={() => setViewMode('team')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'team'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-gray-500 hover:bg-gray-100'
+                }`}
+            >
+              Team History
+            </button>
             </div>
             <button
-              onClick={() => setShowReportsView(true)}
+              onClick={() => navigate('/dashboard/daily-reports')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
             >
               <FileText className="w-4 h-4" />
@@ -570,13 +720,13 @@ export default function AttendancePage() {
       </div>
 
       {/* Clock In/Out Card */}
-      {(user?.role !== ROLES.MANAGER && user?.role !== ROLES.LEAD) && viewMode === 'personal' && (
+      {viewMode === 'personal' && (
         <div className={`glass-card p-6 relative overflow-hidden ${clockedIn
             ? 'border-green-200'
             : 'border-primary/20'
           }`}>
           {/* Background Gradient */}
-          <div className={`absolute inset-0 opacity-10 pointer-events-none ${clockedIn
+          <div className={`absolute inset-0 opacity-5 pointer-events-none ${clockedIn
               ? 'bg-gradient-to-br from-green-500 to-emerald-600'
               : 'bg-gradient-to-br from-primary to-blue-600'
             }`} />
@@ -620,8 +770,8 @@ export default function AttendancePage() {
                   disabled={isClockOutLoading}
                   className="w-full bg-white text-green-600 border border-green-200 px-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
-                  <LogOut className="w-5 h-5" />
-                  Clock Out
+                      <LogOut className="w-5 h-5" />
+                      Clock Out
                 </button>
               </div>
             ) : (
@@ -717,8 +867,17 @@ export default function AttendancePage() {
           monthEnd.setMonth(monthEnd.getMonth() + 1);
           monthEnd.setDate(0);
 
+          // Filter to show only today's records for team history view
+          const today = new Date().toISOString().split('T')[0];
           const monthAttendance = userAttendance.filter(a => {
             const date = getRecordDate(a);
+            // For team history view, only show today's records
+            if (viewMode === 'team') {
+              const recordDate = a.date ? new Date(a.date).toISOString().split('T')[0] : 
+                               (a.clock_in ? new Date(a.clock_in).toISOString().split('T')[0] : '');
+              return recordDate === today;
+            }
+            // For personal view, show all records in selected month
             return date && date >= monthStart && date <= monthEnd;
           }).sort((a, b) => {
             const dateA = getRecordDate(a);
@@ -733,26 +892,49 @@ export default function AttendancePage() {
               style={{ animationDelay: `${userIndex * 0.1}s` }}
             >
               {/* User Header */}
-              <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-primary/20">
-                    {displayUser.name?.charAt(0) || <User className="w-6 h-6" />}
+              {(() => {
+                // Check if user is currently clocked in
+                const today = new Date().toISOString().split('T')[0];
+                const isCurrentlyClockedIn = attendance.some(
+                  a => a && a.employee_id === displayUser.email && a.date === today && a.status === 'clocked_in' && !a.clock_out
+                );
+                
+                return (
+                  <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-primary/20">
+                          {displayUser.name?.charAt(0) || <User className="w-6 h-6" />}
+                        </div>
+                        {isCurrentlyClockedIn && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full animate-pulse" title="Currently Clocked In" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-gray-900">
+                            {displayUser.name || displayUser.email}
+                          </h3>
+                          {isCurrentlyClockedIn && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              CLOCKED IN
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 font-medium capitalize bg-gray-100 px-2 py-0.5 rounded inline-block mt-1">
+                          {displayUser.role?.replace('_', ' ')}
+                        </p>
+                      </div>
+                    </div>
+                    {displayUser.email === user?.email && (
+                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold">
+                        You
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {displayUser.name || displayUser.email}
-                    </h3>
-                    <p className="text-sm text-gray-500 font-medium capitalize bg-gray-100 px-2 py-0.5 rounded inline-block mt-1">
-                      {displayUser.role?.replace('_', ' ')}
-                    </p>
-                  </div>
-                </div>
-                {displayUser.email === user?.email && (
-                  <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold">
-                    You
-                  </span>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Monthly Summary */}
               <div className={`grid gap-4 mb-8 ${displayUser.role === ROLES.PHOTOGRAPHER || displayUser.role === ROLES.EDITOR
@@ -887,7 +1069,15 @@ export default function AttendancePage() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Editing Attendance</p>
-                      <p className="text-lg font-bold text-gray-900">{editingAttendance.employee_id}</p>
+                      {(() => {
+                        const editingUser = users.find(u => u && u.email === editingAttendance.employee_id);
+                        return (
+                          <p className="text-lg font-bold text-gray-900">
+                            {editingUser?.name || editingAttendance.employee_id}
+                            {editingUser?.name && <span className="text-sm font-normal text-gray-500 ml-2">({editingAttendance.employee_id})</span>}
+                          </p>
+                        );
+                      })()}
                     </div>
                     <button
                       onClick={() => {
@@ -965,8 +1155,18 @@ export default function AttendancePage() {
       {/* Clock Out Report Modal */}
       {showClockOutReport && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity z-[100]" onClick={() => setShowClockOutReport(false)} />
-          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl shadow-2xl border border-gray-100 p-6">
+          <div 
+            className="fixed inset-0 transition-opacity z-[100]" 
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            onClick={(e) => {
+              // Only close if clicking the backdrop, not the modal content
+              if (e.target === e.currentTarget) {
+                setShowClockOutReport(false);
+                setClockOutReport('');
+              }
+            }} 
+          />
+          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
               <button
@@ -980,14 +1180,16 @@ export default function AttendancePage() {
               </button>
             </div>
             <p className="text-sm text-gray-600 mb-4">
-              Please provide a brief summary of what you accomplished today before clocking out.
+              (Optional) Provide a brief summary of what you accomplished today before clocking out.
             </p>
             <textarea
               value={clockOutReport}
               onChange={(e) => setClockOutReport(e.target.value)}
-              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions..."
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none mb-4"
+              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
               rows="5"
+              autoFocus
+              disabled={isClockOutLoading}
             />
             <div className="flex gap-3">
               <button
@@ -1012,7 +1214,8 @@ export default function AttendancePage() {
                   setShowClockOutReport(false);
                   setClockOutReport('');
                 }}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                disabled={isClockOutLoading}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1024,8 +1227,8 @@ export default function AttendancePage() {
       {/* Daily Reports View Modal */}
       {showReportsView && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity z-[100]" onClick={() => setShowReportsView(false)} />
-          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn bg-white rounded-3xl shadow-2xl border border-gray-100 p-6">
+          <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={() => setShowReportsView(false)} />
+          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="sticky top-0 bg-white border-b border-gray-100 pb-4 mb-6 -mx-6 px-6">
               <div className="flex items-center justify-between">
                 <div>
