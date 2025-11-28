@@ -433,12 +433,22 @@ export default function LeadDashboard() {
     .filter(item => item.asset && item.editor); // Show if asset exists and editor exists (client optional)
 
   // Calculate active attendance: people currently clocked in (matching attendance page)
+  // Only count team members (exclude managers/leads) to match attendance page logic
   const activeAttendanceCount = attendance.filter(a => {
     if (!a || a.status !== 'clocked_in') return false;
     // Must not have clocked out yet
     if (a.clock_out) return false;
     try {
-      return a.date === today;
+      // Check if date matches today
+      if (a.date !== today) return false;
+      // Check if employee is a team member (not manager/lead)
+      const employee = users.find(u => u && u.email === a.employee_id);
+      if (!employee) return false;
+      // Exclude managers and leads (same logic as attendance page)
+      if (employee.role === ROLES.MANAGER || employee.role === ROLES.LEAD) return false;
+      // Check if user is active
+      if (employee.active === 'FALSE' || employee.active === false) return false;
+      return true;
     } catch {
       return false;
     }
