@@ -105,7 +105,7 @@ export default function EditorTaskHistoryPage() {
     return <FileText className="w-4 h-4" />;
   };
 
-  if (loading) {
+  if (loading.all) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
