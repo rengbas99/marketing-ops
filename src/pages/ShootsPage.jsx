@@ -53,6 +53,18 @@ export default function ShootsPage() {
     return () => stopPolling('shoots-page');
   }, [startPolling, stopPolling]);
 
+  // Prevent body scroll when modals are open
+  useEffect(() => {
+    if (showShootAssignment || showEditModal || showStartForm || showBreakDialog || showWorkLinks) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showShootAssignment, showEditModal, showStartForm, showBreakDialog, showWorkLinks]);
+
   const breaks = Array.isArray(data.Time_Breaks) ? data.Time_Breaks : [];
   const shoots = Array.isArray(data.Shoots) ? data.Shoots : [];
   const attendance = Array.isArray(data.Photographer_Attendance) ? data.Photographer_Attendance : [];
