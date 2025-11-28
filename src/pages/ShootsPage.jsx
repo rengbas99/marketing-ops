@@ -475,7 +475,7 @@ export default function ShootsPage() {
   const breakDuration = activeShoot?.total_break_duration || 0;
 
   return (
-    <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
+    <div className="animate-fadeIn mobile-padding pt-6 md:pt-4 pb-8 space-y-8">
       <BreakTimer breakRecord={activeBreak} onEndBreak={handleEndBreak} />
       <StartShootForm
         isOpen={showStartForm}
