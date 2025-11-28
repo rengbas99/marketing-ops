@@ -18,6 +18,7 @@ export default function EditorDashboard() {
   const { data, loading, startPolling, stopPolling, updateRow, addRow, forceRefresh } = useData();
   const { user } = useAuth();
   const { success, error } = useToast();
+  const navigate = useNavigate();
   const [activeTimeLog, setActiveTimeLog] = useState(null);
   const [activeBreak, setActiveBreak] = useState(null);
   const [showBreakDialog, setShowBreakDialog] = useState(false);
@@ -32,7 +33,6 @@ export default function EditorDashboard() {
   const [elapsedTime, setElapsedTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
-  // Clock-out report state - MUST be defined at component level before any early returns
   const [showClockOutReport, setShowClockOutReport] = useState(false);
   const [clockOutReport, setClockOutReport] = useState('');
 
@@ -1172,77 +1172,6 @@ export default function EditorDashboard() {
           </section>
         )}
       </div>
-    </div>
-  );
-}
-
-function TaskCard({ asset, client, onStart, isActive, isClockedIn, activeTimeLog, onUpdateTimeLog, onPause }) {
-  const isRevision = asset.status === ASSET_STATUS.REVISION;
-
-  return (
-    <div className={`glass-card p-4 transition-all ${isActive ? 'ring-2 ring-primary' : 'hover:bg-white/80'}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-gray-900 truncate">{asset.title}</h3>
-            {isRevision && (
-              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-full flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                Revision
-              </span>
-            )}
-          </div>
-          {client && (
-            <p className="text-sm text-primary font-medium mb-2">{client.company_name}</p>
-          )}
-
-          {asset.editor_notes && (
-            <div className="bg-yellow-50 border border-yellow-100 p-3 rounded-lg text-sm text-gray-700 mb-3">
-              <span className="font-bold text-yellow-800 block mb-1">Notes:</span>
-              {asset.editor_notes}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-            {asset.shoot_date && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Shoot: {new Date(asset.shoot_date).toLocaleDateString()}
-              </span>
-            )}
-            {asset.deadline && (
-              <span className={`flex items-center gap-1 font-medium ${new Date(asset.deadline) < new Date() ? 'text-red-600' : ''
-                }`}>
-                <AlertCircle className="w-3 h-3" />
-                Due: {new Date(asset.deadline).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {!isActive && (
-          <button
-            onClick={() => onStart(asset.asset_id)}
-            className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors text-sm flex items-center gap-2 whitespace-nowrap"
-          >
-            <Play className="w-4 h-4" />
-            Start Editing
-          </button>
-        )}
-      </div>
-
-      {isActive && activeTimeLog && (
-        <EditorSubtaskWidget
-          asset={asset}
-          timeLog={activeTimeLog}
-          onUpdateTimeLog={onUpdateTimeLog}
-          onPause={onPause}
-          onBack={() => {
-            // Optionally handle back action - could stop editing or just hide widget
-            // For now, we'll leave it as optional
-          }}
-        />
-      )}
 
       {/* Clock Out Report Modal */}
       {showClockOutReport && (
@@ -1313,6 +1242,77 @@ function TaskCard({ asset, client, onStart, isActive, isClockedIn, activeTimeLog
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function TaskCard({ asset, client, onStart, isActive, isClockedIn, activeTimeLog, onUpdateTimeLog, onPause }) {
+  const isRevision = asset.status === ASSET_STATUS.REVISION;
+
+  return (
+    <div className={`glass-card p-4 transition-all ${isActive ? 'ring-2 ring-primary' : 'hover:bg-white/80'}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-bold text-gray-900 truncate">{asset.title}</h3>
+            {isRevision && (
+              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-full flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Revision
+              </span>
+            )}
+          </div>
+          {client && (
+            <p className="text-sm text-primary font-medium mb-2">{client.company_name}</p>
+          )}
+
+          {asset.editor_notes && (
+            <div className="bg-yellow-50 border border-yellow-100 p-3 rounded-lg text-sm text-gray-700 mb-3">
+              <span className="font-bold text-yellow-800 block mb-1">Notes:</span>
+              {asset.editor_notes}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+            {asset.shoot_date && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Shoot: {new Date(asset.shoot_date).toLocaleDateString()}
+              </span>
+            )}
+            {asset.deadline && (
+              <span className={`flex items-center gap-1 font-medium ${new Date(asset.deadline) < new Date() ? 'text-red-600' : ''
+                }`}>
+                <AlertCircle className="w-3 h-3" />
+                Due: {new Date(asset.deadline).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!isActive && (
+          <button
+            onClick={() => onStart(asset.asset_id)}
+            className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors text-sm flex items-center gap-2 whitespace-nowrap"
+          >
+            <Play className="w-4 h-4" />
+            Start Editing
+          </button>
+        )}
+      </div>
+
+      {isActive && activeTimeLog && (
+        <EditorSubtaskWidget
+          asset={asset}
+          timeLog={activeTimeLog}
+          onUpdateTimeLog={onUpdateTimeLog}
+          onPause={onPause}
+          onBack={() => {
+            // Optionally handle back action - could stop editing or just hide widget
+            // For now, we'll leave it as optional
+          }}
+        />
       )}
     </div>
   );
