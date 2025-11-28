@@ -345,23 +345,21 @@ export default function ShootsPage() {
       }
 
       setIsCreatingShoot(true);
-      const shootData = {
+      await addRow(COLLECTIONS.SHOOTS, {
         shoot_id: `SH-${Date.now()}`,
-        shoot_name: newShoot.shoot_name,
         title: newShoot.shoot_name,
+        shoot_name: newShoot.shoot_name,
         client_id: newShoot.client_id || '',
         photographer_id: newShoot.photographer_id,
         lead_photographer_email: newShoot.photographer_id,
         date: newShoot.date,
         time: newShoot.time || '',
-        location_name: newShoot.location_name || '',
         location: newShoot.location_name || '',
+        location_name: newShoot.location_name || '',
         status: SHOOT_STATUS.SCHEDULED,
         notes: '',
         created_at: new Date().toISOString(),
-      };
-      
-      await addRow(COLLECTIONS.SHOOTS, shootData);
+      });
 
       success(`Shoot assigned to ${users.find(u => u && u.email === newShoot.photographer_id)?.name || newShoot.photographer_id}`);
       setShowShootAssignment(false);
@@ -373,11 +371,12 @@ export default function ShootsPage() {
         time: '',
         location_name: '',
       });
-      forceRefresh([COLLECTIONS.SHOOTS, COLLECTIONS.CONTENT_CALENDAR]).catch(console.error);
-    } catch (err) {
-      error('Error assigning shoot: ' + err.message);
-    } finally {
+
+      await forceRefresh([COLLECTIONS.SHOOTS]);
       setIsCreatingShoot(false);
+    } catch (err) {
+      setIsCreatingShoot(false);
+      error('Error creating shoot: ' + err.message);
     }
   };
 
@@ -927,41 +926,18 @@ export default function ShootsPage() {
 
       {/* Assign Shoot Modal */}
       {showShootAssignment && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowShootAssignment(false);
-              setNewShoot({
-                shoot_name: '',
-                client_id: '',
-                photographer_id: '',
-                date: '',
-                time: '',
-                location_name: '',
-              });
-            }
-          }}
-        >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="bg-white w-full max-w-md mx-4 rounded-2xl p-6 animate-fadeIn max-h-[90vh] overflow-y-auto shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+            className="fixed inset-0 transition-opacity z-[100]"
+            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
+            onClick={() => setShowShootAssignment(false)}
+          />
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
               <button
-                onClick={() => {
-                  setShowShootAssignment(false);
-                  setNewShoot({
-                    shoot_name: '',
-                    client_id: '',
-                    photographer_id: '',
-                    date: '',
-                    time: '',
-                    location_name: '',
-                  });
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full"
+                onClick={() => setShowShootAssignment(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -1050,17 +1026,7 @@ export default function ShootsPage() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowShootAssignment(false);
-                    setNewShoot({
-                      shoot_name: '',
-                      client_id: '',
-                      photographer_id: '',
-                      date: '',
-                      time: '',
-                      location_name: '',
-                    });
-                  }}
+                  onClick={() => setShowShootAssignment(false)}
                   className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
                 >
                   Cancel

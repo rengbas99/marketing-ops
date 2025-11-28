@@ -18,17 +18,7 @@ export default function AssignTasksPage() {
   const [fileLink, setFileLink] = useState('');
   const [showAssignToEditor, setShowAssignToEditor] = useState(false);
   const [editorToAssign, setEditorToAssign] = useState(null);
-  const [showShootAssignment, setShowShootAssignment] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
-  const [isCreatingShoot, setIsCreatingShoot] = useState(false);
-  const [newShoot, setNewShoot] = useState({
-    shoot_name: '',
-    client_id: '',
-    photographer_id: '',
-    date: '',
-    time: '',
-    location_name: '',
-  });
   const [newTask, setNewTask] = useState({
     title: '',
     client_id: '',
@@ -59,9 +49,7 @@ export default function AssignTasksPage() {
 
   useEffect(() => {
     const action = searchParams.get('action');
-    if (action === 'shoot') {
-      setShowShootAssignment(true);
-    } else if (action === 'task') {
+    if (action === 'task') {
       setShowCreateTask(true);
     }
   }, [searchParams]);
@@ -216,64 +204,6 @@ export default function AssignTasksPage() {
     }
   };
 
-  const handleCreateShoot = async (e) => {
-    e.preventDefault();
-    if (isCreatingShoot) return;
-
-    if (!newShoot.shoot_name || !newShoot.photographer_id || !newShoot.date) {
-      error('Please fill in all required fields (Shoot Name, Videographer, and Date)');
-      return;
-    }
-
-    try {
-      const existingShoot = shoots.find(s =>
-        s &&
-        (s.shoot_name === newShoot.shoot_name || s.title === newShoot.shoot_name) &&
-        s.photographer_id === newShoot.photographer_id &&
-        s.date === newShoot.date &&
-        s.status !== SHOOT_STATUS.COMPLETED
-      );
-
-      if (existingShoot) {
-        error('A shoot with the same name, videographer, and date already exists');
-        return;
-      }
-
-      setIsCreatingShoot(true);
-      await addRow(COLLECTIONS.SHOOTS, {
-        shoot_id: `SH-${Date.now()}`,
-        title: newShoot.shoot_name,
-        shoot_name: newShoot.shoot_name,
-        client_id: newShoot.client_id || '',
-        photographer_id: newShoot.photographer_id,
-        lead_photographer_email: newShoot.photographer_id,
-        date: newShoot.date,
-        time: newShoot.time || '',
-        location: newShoot.location_name || '',
-        location_name: newShoot.location_name || '',
-        status: SHOOT_STATUS.SCHEDULED,
-        notes: '',
-        created_at: new Date().toISOString(),
-      });
-
-      success(`Shoot assigned to ${users.find(u => u && u.email === newShoot.photographer_id)?.name || newShoot.photographer_id}`);
-      setShowShootAssignment(false);
-      setNewShoot({
-        shoot_name: '',
-        client_id: '',
-        photographer_id: '',
-        date: '',
-        time: '',
-        location_name: '',
-      });
-
-      await forceRefresh([COLLECTIONS.SHOOTS]);
-      setIsCreatingShoot(false);
-    } catch (err) {
-      setIsCreatingShoot(false);
-      error('Error creating shoot: ' + err.message);
-    }
-  };
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
@@ -404,15 +334,6 @@ export default function AssignTasksPage() {
             <Plus className="w-4 h-4" />
             Create Task
           </button>
-            {user?.role !== ROLES.EDITOR && (
-          <button
-            onClick={() => setShowShootAssignment(true)}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/30"
-          >
-            <Camera className="w-4 h-4" />
-            Assign Shoot
-          </button>
-            )}
         </div>
         )}
       </div>
