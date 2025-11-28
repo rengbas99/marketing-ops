@@ -78,18 +78,28 @@ export default function ReviewAssetPage() {
   const handleApprove = async () => {
     setIsProcessing(true);
     try {
-      const index = assets.findIndex(a => a?.asset_id === asset.asset_id);
-      if (index !== -1) {
-        await updateRow(COLLECTIONS.ASSETS, index + 2, {
-          ...asset,
-          status: ASSET_STATUS.FINAL,
-          current_editor_status: ASSET_STATUS.COMPLETED
-        });
-        await forceRefresh([COLLECTIONS.ASSETS]);
-        success('Asset approved');
-        navigate('/dashboard/lead');
+      const index = assets.findIndex(a => a?.asset_id === assetId);
+      if (index === -1) {
+        error('Asset not found in data. Please refresh the page.');
+        setIsProcessing(false);
+        return;
       }
+
+      // Ensure asset_id is included for Firebase lookup
+      const updatedAsset = {
+        ...asset,
+        asset_id: asset.asset_id,
+        status: ASSET_STATUS.FINAL,
+        current_editor_status: ASSET_STATUS.COMPLETED,
+        updated_at: new Date().toISOString()
+      };
+
+      await updateRow(COLLECTIONS.ASSETS, index + 2, updatedAsset);
+      await forceRefresh([COLLECTIONS.ASSETS]);
+      success('Asset approved');
+      navigate('/dashboard/lead');
     } catch (err) {
+      console.error('Error updating asset status:', err);
       error(`Error approving asset: ${err.message}`);
     } finally {
       setIsProcessing(false);
@@ -99,18 +109,28 @@ export default function ReviewAssetPage() {
   const handlePublish = async () => {
     setIsProcessing(true);
     try {
-      const index = assets.findIndex(a => a?.asset_id === asset.asset_id);
-      if (index !== -1) {
-        await updateRow(COLLECTIONS.ASSETS, index + 2, {
-          ...asset,
-          status: 'Published',
-          current_editor_status: ASSET_STATUS.COMPLETED
-        });
-        await forceRefresh([COLLECTIONS.ASSETS]);
-        success('Asset published');
-        navigate('/dashboard/lead');
+      const index = assets.findIndex(a => a?.asset_id === assetId);
+      if (index === -1) {
+        error('Asset not found in data. Please refresh the page.');
+        setIsProcessing(false);
+        return;
       }
+
+      // Ensure asset_id is included for Firebase lookup
+      const updatedAsset = {
+        ...asset,
+        asset_id: asset.asset_id,
+        status: 'Published',
+        current_editor_status: ASSET_STATUS.COMPLETED,
+        updated_at: new Date().toISOString()
+      };
+
+      await updateRow(COLLECTIONS.ASSETS, index + 2, updatedAsset);
+      await forceRefresh([COLLECTIONS.ASSETS]);
+      success('Asset published');
+      navigate('/dashboard/lead');
     } catch (err) {
+      console.error('Error updating asset status:', err);
       error(`Error publishing asset: ${err.message}`);
     } finally {
       setIsProcessing(false);
@@ -125,21 +145,31 @@ export default function ReviewAssetPage() {
 
     setIsProcessing(true);
     try {
-      const index = assets.findIndex(a => a?.asset_id === asset.asset_id);
-      if (index !== -1) {
-        await updateRow(COLLECTIONS.ASSETS, index + 2, {
-          ...asset,
-          status: ASSET_STATUS.REVISION,
-          revision_notes: revisionNotes,
-          current_editor_status: ASSET_STATUS.REVISION
-        });
-        await forceRefresh([COLLECTIONS.ASSETS]);
-        success('Revision requested');
-        setRevisionNotes('');
-        setShowRevisionForm(false);
-        navigate('/dashboard/lead');
+      const index = assets.findIndex(a => a?.asset_id === assetId);
+      if (index === -1) {
+        error('Asset not found in data. Please refresh the page.');
+        setIsProcessing(false);
+        return;
       }
+
+      // Ensure asset_id is included for Firebase lookup
+      const updatedAsset = {
+        ...asset,
+        asset_id: asset.asset_id,
+        status: ASSET_STATUS.REVISION,
+        revision_notes: revisionNotes,
+        current_editor_status: ASSET_STATUS.REVISION,
+        updated_at: new Date().toISOString()
+      };
+
+      await updateRow(COLLECTIONS.ASSETS, index + 2, updatedAsset);
+      await forceRefresh([COLLECTIONS.ASSETS]);
+      success('Revision requested');
+      setRevisionNotes('');
+      setShowRevisionForm(false);
+      navigate('/dashboard/lead');
     } catch (err) {
+      console.error('Error updating asset status:', err);
       error(`Error requesting revision: ${err.message}`);
     } finally {
       setIsProcessing(false);
