@@ -12,7 +12,7 @@ import UpdateAssetModal from '../../components/UpdateAssetModal';
 import AssetWorkDetailsModal from '../../components/AssetWorkDetailsModal';
 import { Users, Camera, FileEdit, Calendar, Plus, Clock, LogIn, LogOut, Coffee, FileText, MapPin, AlertCircle, Eye, Edit, Plane, X } from 'lucide-react';
 import { formatBreakDuration, formatTime as formatTimeUtil } from '../../utils/timeFormatting';
-import { COLLECTIONS, SHOOT_STATUS, ASSET_STATUS } from '../../constants';
+import { COLLECTIONS, SHOOT_STATUS, ASSET_STATUS, ROLES } from '../../constants';
 
 export default function LeadDashboard() {
   const { data, loading, startPolling, stopPolling, addRow, updateRow, forceRefresh } = useData();
