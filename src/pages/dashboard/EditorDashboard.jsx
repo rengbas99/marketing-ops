@@ -755,13 +755,13 @@ export default function EditorDashboard() {
           });
         } else {
           error('Asset not found. Please refresh the page.');
+          return;
         }
-      } else {
-        error('Time log not found. Please refresh the page.');
-      }
 
         await forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.EDITOR_TIME_LOGS]);
         success('Work links saved!');
+      } else {
+        error('Time log not found. Please refresh the page.');
       }
     } catch (err) {
       error('Error saving links: ' + err.message);
