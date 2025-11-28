@@ -432,26 +432,26 @@ export default function LeadDashboard() {
     })
     .filter(item => item.asset && item.editor); // Show if asset exists and editor exists (client optional)
 
-  // Calculate active attendance: people currently clocked in (matching attendance page)
-  // Only count team members (exclude managers/leads) to match attendance page logic
-  const activeAttendanceCount = attendance.filter(a => {
-    if (!a || a.status !== 'clocked_in') return false;
-    // Must not have clocked out yet
-    if (a.clock_out) return false;
-    try {
-      // Check if date matches today
-      if (a.date !== today) return false;
-      // Check if employee is a team member (not manager/lead)
-      const employee = users.find(u => u && u.email === a.employee_id);
-      if (!employee) return false;
-      // Exclude managers and leads (same logic as attendance page)
-      if (employee.role === ROLES.MANAGER || employee.role === ROLES.LEAD) return false;
-      // Check if user is active
-      if (employee.active === 'FALSE' || employee.active === false) return false;
-      return true;
-    } catch {
-      return false;
-    }
+  // Calculate active attendance: people currently clocked in (matching attendance page exactly)
+  // Use the same logic as LeadAttendanceDashboard - iterate through team members first
+  const teamMembers = users.filter(u => 
+    u && 
+    u.active !== 'FALSE' && 
+    u.active !== false &&
+    u.role !== ROLES.MANAGER &&
+    u.role !== ROLES.LEAD
+  );
+
+  const activeAttendanceCount = teamMembers.filter(member => {
+    const memberAttendance = attendance.find(
+      a => a && a.employee_id === member.email && a.date === today
+    );
+    
+    if (!memberAttendance) return false;
+    
+    // Exact same check as attendance page
+    const isClockedIn = memberAttendance.status === 'clocked_in' && !memberAttendance.clock_out;
+    return isClockedIn;
   }).length;
 
   if (loading.all) {

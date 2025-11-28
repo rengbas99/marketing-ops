@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileEdit, Clock, User, AlertCircle } from 'lucide-react';
-import ApprovalModal from './ApprovalModal';
 import { ASSET_STATUS } from '../constants';
 
 export default function ApprovalsList({ assets, users, shoots, clients, onUpdate }) {
-  const [selectedAsset, setSelectedAsset] = useState(null);
+  const navigate = useNavigate();
 
   if (!assets || assets.length === 0) {
     return (
@@ -53,7 +52,7 @@ export default function ApprovalsList({ assets, users, shoots, clients, onUpdate
               key={asset.asset_id || index}
               className="glass-card p-4 hover:shadow-md transition-all cursor-pointer animate-fadeIn border-l-4 border-l-purple-500"
               style={{ animationDelay: `${index * 0.05}s` }}
-              onClick={() => setSelectedAsset(asset)}
+              onClick={() => navigate(`/dashboard/review/${asset.asset_id}`)}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -114,7 +113,7 @@ export default function ApprovalsList({ assets, users, shoots, clients, onUpdate
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedAsset(asset);
+                      navigate(`/dashboard/review/${asset.asset_id}`);
                     }}
                     className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-dark transition-colors flex items-center gap-1.5"
                   >
@@ -127,19 +126,6 @@ export default function ApprovalsList({ assets, users, shoots, clients, onUpdate
           );
         })}
       </div>
-
-      {/* Approval Modal */}
-      <ApprovalModal
-        isOpen={!!selectedAsset}
-        onClose={() => {
-          setSelectedAsset(null);
-        }}
-        asset={selectedAsset}
-        users={users}
-        shoots={shoots}
-        clients={clients}
-        onUpdate={onUpdate}
-      />
     </>
   );
 }

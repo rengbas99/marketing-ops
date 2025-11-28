@@ -24,6 +24,7 @@ import EditorTaskHistoryPage from './pages/EditorTaskHistoryPage';
 import DailyReportsPage from './pages/DailyReportsPage';
 import UserAttendanceDetailPage from './pages/UserAttendanceDetailPage';
 import ClearAttendancePage from './pages/ClearAttendancePage';
+import ReviewAssetPage from './pages/ReviewAssetPage';
 import { ROLES } from './constants';
 
 // Protected Route Component
@@ -139,6 +140,7 @@ function App() {
                   <Route path="daily-reports" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER]}><DailyReportsPage /></ProtectedRoute>} />
                   <Route path="attendance/user/:userId" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER]}><UserAttendanceDetailPage /></ProtectedRoute>} />
                   <Route path="clear-attendance" element={<ProtectedRoute allowedRoles={[ROLES.MANAGER]}><ClearAttendancePage /></ProtectedRoute>} />
+                  <Route path="review/:assetId" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER]}><ReviewAssetPage /></ProtectedRoute>} />
                   <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                 </Route>
 
