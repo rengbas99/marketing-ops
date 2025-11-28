@@ -81,6 +81,8 @@ export default function LeadDashboard() {
 
   const activeAttendance = attendance.filter(a => {
     if (!a || a.status !== 'clocked_in') return false;
+    // Must not have clocked out yet
+    if (a.clock_out) return false;
     try {
       return a.date === today;
     } catch {
