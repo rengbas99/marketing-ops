@@ -927,25 +927,26 @@ export default function ShootsPage() {
 
       {/* Assign Shoot Modal */}
       {showShootAssignment && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4 pt-20 md:pt-4">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowShootAssignment(false);
+              setNewShoot({
+                shoot_name: '',
+                client_id: '',
+                photographer_id: '',
+                date: '',
+                time: '',
+                location_name: '',
+              });
+            }
+          }}
+        >
           <div
-            className="fixed inset-0 transition-opacity"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowShootAssignment(false);
-                setNewShoot({
-                  shoot_name: '',
-                  client_id: '',
-                  photographer_id: '',
-                  date: '',
-                  time: '',
-                  location_name: '',
-                });
-              }
-            }}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+            className="bg-white w-full max-w-md mx-4 rounded-2xl p-6 animate-fadeIn max-h-[90vh] overflow-y-auto shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
               <button
@@ -960,7 +961,7 @@ export default function ShootsPage() {
                     location_name: '',
                   });
                 }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
