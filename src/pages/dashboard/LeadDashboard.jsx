@@ -432,8 +432,17 @@ export default function LeadDashboard() {
     })
     .filter(item => item.asset && item.editor); // Show if asset exists and editor exists (client optional)
 
-  // Calculate active attendance: people actively working (on shoots or editing)
-  const activeAttendanceCount = teamOnShoots.length + teamEditing.length;
+  // Calculate active attendance: people currently clocked in (matching attendance page)
+  const activeAttendanceCount = attendance.filter(a => {
+    if (!a || a.status !== 'clocked_in') return false;
+    // Must not have clocked out yet
+    if (a.clock_out) return false;
+    try {
+      return a.date === today;
+    } catch {
+      return false;
+    }
+  }).length;
 
   if (loading.all) {
     return (
