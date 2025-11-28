@@ -89,13 +89,6 @@ export default function AssignTasksPage() {
     }
   );
 
-  const availablePhotographers = (Array.isArray(users) ? users : []).filter(
-    u => {
-      if (!u || u.active === 'FALSE') return false;
-      return u.role === ROLES.PHOTOGRAPHER || u.role === ROLES.LEAD;
-    }
-  );
-
   const allAvailableUsers = (Array.isArray(users) ? users : []).filter(
     u => {
       if (!u || !u.email) return false;
