@@ -926,7 +926,7 @@ export default function ShootsPage() {
 
       {/* Assign Shoot Modal */}
       {showShootAssignment && (
-        <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 pt-20 md:pt-4">
+        <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 pt-32 md:pt-2">
           <div
             className="fixed inset-0 transition-opacity z-[100]"
             style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
