@@ -126,8 +126,8 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
           }
         }} 
       />
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-[10000] animate-fadeIn p-0 flex flex-col bg-white rounded-3xl border border-gray-100" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between z-[10001] rounded-t-3xl">
+      <div className="w-full max-w-2xl max-h-[85vh] relative z-[10000] animate-fadeIn p-0 flex flex-col bg-white rounded-3xl border border-gray-100" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between rounded-t-3xl">
           <div>
             <h3 className="text-xl font-bold text-gray-900">{asset.title || 'Untitled Asset'}</h3>
             {client && (
@@ -142,7 +142,7 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
           {/* Asset Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -259,9 +259,9 @@ export default function ApprovalModal({ isOpen, onClose, asset, users, shoots, c
           )}
         </div>
 
-        {/* Action Buttons - Sticky at bottom */}
+        {/* Action Buttons - Fixed at bottom */}
           {!showRevisionForm && (
-          <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-3xl flex flex-wrap gap-3 z-[10001]">
+          <div className="flex-shrink-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-3xl flex flex-wrap gap-3">
               <button
                 onClick={handleApprove}
                 disabled={isProcessing}
