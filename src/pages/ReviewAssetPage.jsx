@@ -3,7 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../components/Toast';
 import { COLLECTIONS, ASSET_STATUS } from '../constants';
-import { X, CheckCircle, Rocket, AlertTriangle, FileEdit, Clock, User, Link as LinkIcon, Calendar, ArrowLeft } from 'lucide-react';
+import {
+  ArrowLeft,
+  User,
+  Clock,
+  Calendar,
+  FileEdit,
+  Link as LinkIcon,
+  CheckCircle,
+  Rocket,
+  AlertTriangle
+} from 'lucide-react';
 
 export default function ReviewAssetPage() {
   const { assetId } = useParams();
@@ -29,7 +39,7 @@ export default function ReviewAssetPage() {
   const shoots = Array.isArray(data.Shoots) ? data.Shoots : [];
   const clients = Array.isArray(data.Clients) ? data.Clients : [];
 
-  const asset = assets.find(a => a && a.asset_id === assetId);
+  const asset = assets.find(a => a?.asset_id === assetId);
 
   useEffect(() => {
     if (!asset && !loading.all && assets.length > 0) {
@@ -40,46 +50,57 @@ export default function ReviewAssetPage() {
 
   if (loading.all || !asset) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );
   }
 
-  const editor = users.find(u => u && (u.email === asset.assigned_editor_email || u.email === asset.assigned_creator_email));
-  const shoot = asset.shoot_id ? shoots.find(s => s && s.shoot_id === asset.shoot_id) : null;
-  const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
+  const editor = users.find(
+    u => u?.email === asset.assigned_editor_email || u?.email === asset.assigned_creator_email
+  );
+  const shoot = asset.shoot_id ? shoots.find(s => s?.shoot_id === asset.shoot_id) : null;
+  const client = shoot ? clients.find(c => c?.client_id === shoot.client_id) : null;
 
   let deadlineStr = '';
   let isOverdue = false;
-  try {
-    if (asset.deadline) {
-      const deadline = new Date(asset.deadline);
-      if (!isNaN(deadline.getTime())) {
-        deadlineStr = deadline.toLocaleDateString();
-        isOverdue = deadline < new Date() && asset.status !== ASSET_STATUS.COMPLETED && asset.status !== ASSET_STATUS.FINAL;
-      }
+  if (asset.deadline) {
+    const deadline = new Date(asset.deadline);
+    if (!isNaN(deadline.getTime())) {
+      deadlineStr = deadline.toLocaleDateString();
+      isOverdue =
+        deadline < new Date() &&
+        asset.status !== ASSET_STATUS.COMPLETED &&
+        asset.status !== ASSET_STATUS.FINAL;
     }
-  } catch (e) {
-    console.error('Date error:', e);
   }
 
   const handleApprove = async () => {
     setIsProcessing(true);
     try {
-      const assetIndex = assets.findIndex(a => a && a.asset_id === asset.asset_id);
-      if (assetIndex !== -1) {
-        await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
-          ...asset,
-          status: ASSET_STATUS.FINAL,
-          current_editor_status: ASSET_STATUS.COMPLETED,
-        });
-        await forceRefresh([COLLECTIONS.ASSETS]);
-        success('Asset approved!');
-        navigate('/dashboard/lead');
+      const index = assets.findIndex(a => a?.asset_id === assetId);
+      if (index === -1) {
+        error('Asset not found in data. Please refresh the page.');
+        setIsProcessing(false);
+        return;
       }
+
+      // Ensure asset_id is included for Firebase lookup
+      const updatedAsset = {
+        ...asset,
+        asset_id: asset.asset_id,
+        status: ASSET_STATUS.FINAL,
+        current_editor_status: ASSET_STATUS.COMPLETED,
+        updated_at: new Date().toISOString()
+      };
+
+      await updateRow(COLLECTIONS.ASSETS, index + 2, updatedAsset);
+      await forceRefresh([COLLECTIONS.ASSETS]);
+      success('Asset approved');
+      navigate('/dashboard/lead');
     } catch (err) {
-      error('Error approving asset: ' + err.message);
+      console.error('Error updating asset status:', err);
+      error(`Error approving asset: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -88,19 +109,29 @@ export default function ReviewAssetPage() {
   const handlePublish = async () => {
     setIsProcessing(true);
     try {
-      const assetIndex = assets.findIndex(a => a && a.asset_id === asset.asset_id);
-      if (assetIndex !== -1) {
-        await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
-          ...asset,
-          status: 'Published',
-          current_editor_status: ASSET_STATUS.COMPLETED,
-        });
-        await forceRefresh([COLLECTIONS.ASSETS]);
-        success('Asset published!');
-        navigate('/dashboard/lead');
+      const index = assets.findIndex(a => a?.asset_id === assetId);
+      if (index === -1) {
+        error('Asset not found in data. Please refresh the page.');
+        setIsProcessing(false);
+        return;
       }
+
+      // Ensure asset_id is included for Firebase lookup
+      const updatedAsset = {
+        ...asset,
+        asset_id: asset.asset_id,
+        status: 'Published',
+        current_editor_status: ASSET_STATUS.COMPLETED,
+        updated_at: new Date().toISOString()
+      };
+
+      await updateRow(COLLECTIONS.ASSETS, index + 2, updatedAsset);
+      await forceRefresh([COLLECTIONS.ASSETS]);
+      success('Asset published');
+      navigate('/dashboard/lead');
     } catch (err) {
-      error('Error publishing asset: ' + err.message);
+      console.error('Error updating asset status:', err);
+      error(`Error publishing asset: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -114,208 +145,200 @@ export default function ReviewAssetPage() {
 
     setIsProcessing(true);
     try {
-      const assetIndex = assets.findIndex(a => a && a.asset_id === asset.asset_id);
-      if (assetIndex !== -1) {
-        await updateRow(COLLECTIONS.ASSETS, assetIndex + 2, {
-          ...asset,
-          status: ASSET_STATUS.REVISION,
-          revision_notes: revisionNotes,
-          current_editor_status: ASSET_STATUS.REVISION,
-        });
-        await forceRefresh([COLLECTIONS.ASSETS]);
-        success('Revision requested! Editor will see your notes.');
-        setRevisionNotes('');
-        setShowRevisionForm(false);
-        navigate('/dashboard/lead');
+      const index = assets.findIndex(a => a?.asset_id === assetId);
+      if (index === -1) {
+        error('Asset not found in data. Please refresh the page.');
+        setIsProcessing(false);
+        return;
       }
+
+      // Ensure asset_id is included for Firebase lookup
+      const updatedAsset = {
+        ...asset,
+        asset_id: asset.asset_id,
+        status: ASSET_STATUS.REVISION,
+        revision_notes: revisionNotes,
+        current_editor_status: ASSET_STATUS.REVISION,
+        updated_at: new Date().toISOString()
+      };
+
+      await updateRow(COLLECTIONS.ASSETS, index + 2, updatedAsset);
+      await forceRefresh([COLLECTIONS.ASSETS]);
+      success('Revision requested');
+      setRevisionNotes('');
+      setShowRevisionForm(false);
+      navigate('/dashboard/lead');
     } catch (err) {
-      error('Error requesting revision: ' + err.message);
+      console.error('Error updating asset status:', err);
+      error(`Error requesting revision: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const Card = ({ title, icon: Icon, children }) => (
+    <div className="rounded-xl border border-gray-100 bg-white p-4 md:p-6 shadow-sm">
+      <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <Icon className="h-4 w-4 text-gray-400" />
+        <span>{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+
   return (
-    <div className="animate-fadeIn mobile-padding pb-8">
+    <div className="pb-10 px-4 md:px-6 animate-fadeIn">
+      {/* Back */}
+      <button
+        onClick={() => navigate('/dashboard/lead')}
+        className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </button>
+
       {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => navigate('/dashboard/lead')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-medium">Back to Dashboard</span>
-        </button>
-        <div className="bg-gradient-to-r from-purple-600 to-primary rounded-2xl p-6 md:p-8 text-white">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{asset.title || 'Untitled Asset'}</h1>
-          {client && (
-            <p className="text-sm md:text-base text-white/90 font-bold uppercase tracking-wider">{client.company_name}</p>
-          )}
-        </div>
+      <div className="mb-6 rounded-2xl bg-primary px-6 py-7 text-white">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+          {asset.title || 'Untitled Asset'}
+        </h1>
+        {client && (
+          <p className="mt-1 text-xs uppercase tracking-wider text-white/80">
+            {client.company_name}
+          </p>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Asset Details Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          <div className="glass-card p-4 md:p-6">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-              <User className="w-4 h-4 flex-shrink-0" />
-              <span>Assigned To</span>
-            </div>
+      <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
+        {/* Meta grid */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Card title="Assigned To" icon={User}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-sm md:text-base shadow-sm">
-                {editor?.name?.charAt(0) || <User className="w-5 h-5 md:w-6 md:h-6" />}
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white font-semibold">
+                {editor?.name?.[0] || <User className="h-5 w-5" />}
               </div>
-              <p className="font-bold text-gray-900 text-sm md:text-base">{editor?.name || asset.assigned_editor_email || asset.assigned_creator_email || 'Unassigned'}</p>
+              <p className="font-medium text-gray-900 text-sm md:text-base">
+                {editor?.name || asset.assigned_editor_email || 'Unassigned'}
+              </p>
             </div>
-          </div>
+          </Card>
 
-          <div className="glass-card p-4 md:p-6">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-              <Clock className="w-4 h-4 flex-shrink-0" />
-              <span>Deadline</span>
-            </div>
-            <p className={`font-bold text-base md:text-lg ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+          <Card title="Deadline" icon={Clock}>
+            <p className={`font-semibold ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
               {deadlineStr || 'No deadline'}
               {isOverdue && ' (Overdue)'}
             </p>
-          </div>
+          </Card>
 
-          <div className="glass-card p-4 md:p-6">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-              <FileEdit className="w-4 h-4 flex-shrink-0" />
-              <span>Progress</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 bg-gray-200 rounded-full h-3 md:h-4 overflow-hidden">
+          <Card title="Progress" icon={FileEdit}>
+            <div className="space-y-2">
+              <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
                 <div
-                  className="bg-primary h-3 md:h-4 rounded-full transition-all duration-500"
+                  className="h-full rounded-full bg-primary"
                   style={{ width: `${asset.work_progress || 0}%` }}
                 />
               </div>
-              <span className="text-sm md:text-base font-bold text-gray-900 whitespace-nowrap">{asset.work_progress || 0}%</span>
+              <p className="text-xs font-medium text-gray-500">
+                {asset.work_progress || 0}%
+              </p>
             </div>
-          </div>
+          </Card>
 
           {shoot && (
-            <div className="glass-card p-4 md:p-6">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                <Calendar className="w-4 h-4 flex-shrink-0" />
-                <span>From Shoot</span>
-              </div>
-              <p className="font-bold text-gray-900 text-sm md:text-base truncate">{shoot.shoot_name || 'Untitled Shoot'}</p>
-            </div>
+            <Card title="From Shoot" icon={Calendar}>
+              <p className="font-medium text-gray-900 truncate">
+                {shoot.shoot_name || 'Untitled Shoot'}
+              </p>
+            </Card>
           )}
         </div>
 
-        {/* Work Links */}
+        {/* Work link */}
         {asset.upload_folder_link && (
-          <div className="glass-card p-4 md:p-6 bg-blue-50 border-blue-100">
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">
-              <LinkIcon className="w-4 h-4 flex-shrink-0" />
-              <span>Work Files</span>
-            </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 flex items-center gap-2">
+              <LinkIcon className="h-4 w-4 text-gray-400" />
+              Work Files
+            </p>
             <a
               href={asset.upload_folder_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary font-medium hover:underline text-sm md:text-base break-all flex items-start gap-1"
+              className="text-primary text-sm font-medium break-all hover:underline"
             >
-              <LinkIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span className="break-all">{asset.upload_folder_link}</span>
+              {asset.upload_folder_link}
             </a>
           </div>
         )}
 
-        {/* Revision Form */}
+        {/* Revision */}
         {showRevisionForm && (
-          <div className="glass-card p-4 md:p-6 animate-fadeIn">
-            <label className="block text-sm md:text-base font-bold text-gray-700 mb-3">
-              Revision Notes <span className="text-red-500">*</span>
+          <div className="rounded-xl border border-orange-100 bg-orange-50 p-5">
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
+              Revision Notes *
             </label>
             <textarea
               value={revisionNotes}
               onChange={(e) => setRevisionNotes(e.target.value)}
-              placeholder="Explain what needs to be changed..."
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none text-sm md:text-base"
-              rows="6"
+              rows={5}
+              className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 outline-none resize-none"
+              placeholder="Explain what needs to change..."
             />
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="mt-4 flex gap-3">
               <button
                 onClick={() => {
                   setShowRevisionForm(false);
                   setRevisionNotes('');
                 }}
-                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition-colors touch-manipulation text-sm md:text-base"
+                className="flex-1 rounded-lg bg-gray-200 py-3 text-sm font-semibold text-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRequestRevision}
-                disabled={isProcessing || !revisionNotes.trim()}
-                className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 touch-manipulation text-sm md:text-base"
+                disabled={isProcessing}
+                className="flex-1 rounded-lg bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
               >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="w-4 h-4" />
-                    <span>Send Revision Request</span>
-                  </>
-                )}
+                Request Revision
               </button>
             </div>
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Actions */}
         {!showRevisionForm && (
-          <div className="glass-card p-4 md:p-6 space-y-3">
+          <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm space-y-3">
             <button
               onClick={handleApprove}
               disabled={isProcessing}
-              className="w-full px-4 py-3 md:py-4 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20 touch-manipulation text-sm md:text-base"
+              className="w-full rounded-lg bg-primary py-3 text-white font-semibold hover:bg-primary/90 disabled:opacity-50"
             >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-5 h-5" />
-                  <span>Approve</span>
-                </>
-              )}
+              <span className="flex items-center justify-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                Approve
+              </span>
             </button>
+
             <button
               onClick={handlePublish}
               disabled={isProcessing}
-              className="w-full px-4 py-3 md:py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 touch-manipulation text-sm md:text-base"
+              className="w-full rounded-lg bg-gray-900 py-3 text-white font-semibold hover:bg-gray-800 disabled:opacity-50"
             >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <Rocket className="w-5 h-5" />
-                  <span>Publish</span>
-                </>
-              )}
+              <span className="flex items-center justify-center gap-2">
+                <Rocket className="h-5 w-5" />
+                Publish
+              </span>
             </button>
+
             <button
               onClick={() => setShowRevisionForm(true)}
               disabled={isProcessing}
-              className="w-full px-4 py-3 md:py-4 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 touch-manipulation text-sm md:text-base"
+              className="w-full rounded-lg bg-orange-500 py-3 text-white font-semibold hover:bg-orange-600 disabled:opacity-50"
             >
-              <AlertTriangle className="w-5 h-5" />
-              <span>Request Revision</span>
+              <span className="flex items-center justify-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Request Revision
+              </span>
             </button>
           </div>
         )}
@@ -323,4 +346,3 @@ export default function ReviewAssetPage() {
     </div>
   );
 }
-

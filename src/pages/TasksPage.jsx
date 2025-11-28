@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
@@ -11,6 +12,7 @@ import { COLLECTIONS, ROLES, ASSET_STATUS } from '../constants';
 import UpdateAssetModal from '../components/UpdateAssetModal';
 
 export default function TasksPage() {
+  const navigate = useNavigate();
   const { data, loading, startPolling, stopPolling, updateRow, addRow, forceRefresh } = useData();
   const { user } = useAuth();
   const { success, error } = useToast();
@@ -367,8 +369,19 @@ export default function TasksPage() {
 
       {/* Header */}
       <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">My Tasks</h1>
-        <p className="text-gray-600">Manage your assigned assets</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">My Tasks</h1>
+            <p className="text-gray-600">Manage your assigned assets</p>
+          </div>
+          <button
+            onClick={() => navigate('/dashboard/editor-task-history')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <FileEdit className="w-4 h-4" />
+            View Completed Tasks
+          </button>
+        </div>
       </div>
 
       {/* Team Workload Section */}

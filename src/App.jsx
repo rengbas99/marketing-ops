@@ -136,7 +136,7 @@ function App() {
                   <Route path="attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
                   <Route path="active-work" element={<ProtectedRoute><ActiveWorkPage /></ProtectedRoute>} />
                   <Route path="active-editing" element={<ProtectedRoute><ActiveEditingPage /></ProtectedRoute>} />
-                  <Route path="editor-task-history" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER]}><EditorTaskHistoryPage /></ProtectedRoute>} />
+                  <Route path="editor-task-history" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER, ROLES.EDITOR]}><EditorTaskHistoryPage /></ProtectedRoute>} />
                   <Route path="daily-reports" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER]}><DailyReportsPage /></ProtectedRoute>} />
                   <Route path="attendance/user/:userId" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER]}><UserAttendanceDetailPage /></ProtectedRoute>} />
                   <Route path="clear-attendance" element={<ProtectedRoute allowedRoles={[ROLES.MANAGER]}><ClearAttendancePage /></ProtectedRoute>} />
