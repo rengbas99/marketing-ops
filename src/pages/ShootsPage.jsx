@@ -8,7 +8,6 @@ import BreakDialog from '../components/BreakDialog';
 import BreakTimer from '../components/BreakTimer';
 import WorkLinksModal from '../components/WorkLinksModal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import CreateShootModal from '../components/CreateShootModal';
 import { Camera, Calendar, MapPin, Clock, User, Play, Square, Coffee, Link as LinkIcon, Plus, Edit, X, Calendar as CalendarIcon, AlertCircle, Trash2 } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES, SHOOT_STATUS } from '../constants';
@@ -31,7 +30,6 @@ export default function ShootsPage() {
   const [shootToCancel, setShootToCancel] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [shootToDelete, setShootToDelete] = useState(null);
-  const [showCreateShootModal, setShowCreateShootModal] = useState(false);
   const [showShootAssignment, setShowShootAssignment] = useState(false);
   const [isCreatingShoot, setIsCreatingShoot] = useState(false);
   const [newShoot, setNewShoot] = useState({
@@ -301,15 +299,15 @@ export default function ShootsPage() {
       const shootIndex = shoots.findIndex(s => s && s.shoot_id === editingShoot.shoot_id);
       if (shootIndex !== -1) {
         await updateRow(COLLECTIONS.SHOOTS, shootIndex + 2, {
-          title: editingShoot.shoot_name || editingShoot.title,
-          shoot_name: editingShoot.shoot_name || editingShoot.title,
+          shoot_name: editingShoot.shoot_name || editingShoot.title || '',
+          title: editingShoot.shoot_name || editingShoot.title || '',
           date: editingShoot.date,
           time: editingShoot.time || '',
-          location: editingShoot.location_name || editingShoot.location || '',
           location_name: editingShoot.location_name || editingShoot.location || '',
+          location: editingShoot.location_name || editingShoot.location || '',
           client_id: editingShoot.client_id || '',
-          photographer_id: editingShoot.photographer_id,
-          lead_photographer_email: editingShoot.photographer_id,
+          photographer_id: editingShoot.photographer_id || '',
+          lead_photographer_email: editingShoot.photographer_id || editingShoot.lead_photographer_email || '',
           notes: editingShoot.notes || '',
         });
 
@@ -320,17 +318,6 @@ export default function ShootsPage() {
       }
     } catch (err) {
       error('Error updating shoot: ' + err.message);
-    }
-  };
-
-  const handleCreateShoot = async (shootData) => {
-    try {
-      await addRow(COLLECTIONS.SHOOTS, shootData);
-      await forceRefresh([COLLECTIONS.SHOOTS, COLLECTIONS.CONTENT_CALENDAR]);
-      success('Shoot created successfully!');
-      setShowCreateShootModal(false);
-    } catch (err) {
-      error('Error creating shoot: ' + err.message);
     }
   };
 
@@ -358,21 +345,23 @@ export default function ShootsPage() {
       }
 
       setIsCreatingShoot(true);
-      await addRow(COLLECTIONS.SHOOTS, {
+      const shootData = {
         shoot_id: `SH-${Date.now()}`,
-        title: newShoot.shoot_name,
         shoot_name: newShoot.shoot_name,
+        title: newShoot.shoot_name,
         client_id: newShoot.client_id || '',
         photographer_id: newShoot.photographer_id,
         lead_photographer_email: newShoot.photographer_id,
         date: newShoot.date,
         time: newShoot.time || '',
-        location: newShoot.location_name || '',
         location_name: newShoot.location_name || '',
+        location: newShoot.location_name || '',
         status: SHOOT_STATUS.SCHEDULED,
         notes: '',
         created_at: new Date().toISOString(),
-      });
+      };
+      
+      await addRow(COLLECTIONS.SHOOTS, shootData);
 
       success(`Shoot assigned to ${users.find(u => u && u.email === newShoot.photographer_id)?.name || newShoot.photographer_id}`);
       setShowShootAssignment(false);
@@ -935,15 +924,6 @@ export default function ShootsPage() {
           )}
         </div>
       </div>
-
-      {/* Create Shoot Modal */}
-      <CreateShootModal
-        isOpen={showCreateShootModal}
-        onClose={() => setShowCreateShootModal(false)}
-        onSubmit={handleCreateShoot}
-        clients={clients}
-        photographers={users.filter(u => u && u.role === ROLES.PHOTOGRAPHER)}
-      />
 
       {/* Assign Shoot Modal */}
       {showShootAssignment && (
