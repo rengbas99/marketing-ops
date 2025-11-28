@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Calendar, CheckCircle, XCircle, FileText, User, Filter } from 'lucide-react';
-import { COLLECTIONS, ASSET_STATUS } from '../constants';
+import { COLLECTIONS, ASSET_STATUS, ROLES } from '../constants';
 
 export default function EditorTaskHistoryPage() {
   const navigate = useNavigate();
@@ -25,6 +25,13 @@ export default function EditorTaskHistoryPage() {
       return () => stopPolling('editor-task-history');
     }
   }, [startPolling, stopPolling]);
+
+  // Auto-filter by current user's email if they're an editor
+  useEffect(() => {
+    if (user?.role === ROLES.EDITOR && user?.email && !selectedEditor) {
+      setSelectedEditor(user.email);
+    }
+  }, [user, selectedEditor]);
 
   const assets = Array.isArray(data.Assets) ? data.Assets : [];
   const users = Array.isArray(data.Users) ? data.Users : [];
@@ -138,21 +145,23 @@ export default function EditorTaskHistoryPage() {
 
         {/* Filters */}
         <div className="glass-card p-4 mb-6 flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-bold text-gray-700 mb-2">Filter by Editor</label>
-            <select
-              value={selectedEditor}
-              onChange={(e) => setSelectedEditor(e.target.value)}
-              className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-            >
-              <option value="">All Editors</option>
-              {editors.map(editor => (
-                <option key={editor.email} value={editor.email}>
-                  {editor.name || editor.email}
-                </option>
-              ))}
-            </select>
-          </div>
+          {user?.role !== ROLES.EDITOR && (
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Filter by Editor</label>
+              <select
+                value={selectedEditor}
+                onChange={(e) => setSelectedEditor(e.target.value)}
+                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+              >
+                <option value="">All Editors</option>
+                {editors.map(editor => (
+                  <option key={editor.email} value={editor.email}>
+                    {editor.name || editor.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex-1 min-w-[200px]">
             <label className="block text-sm font-bold text-gray-700 mb-2">Filter by Status</label>
