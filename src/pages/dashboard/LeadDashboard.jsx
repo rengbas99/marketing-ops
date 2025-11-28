@@ -601,7 +601,7 @@ export default function LeadDashboard() {
             </button>
           </div>
           <div className="flex flex-col items-start">
-            <div className="text-3xl font-bold text-gray-900 mb-1 ml-1">{activeAttendance.length || 0}</div>
+            <div className="text-3xl font-bold text-gray-900 mb-1 ml-1">{activeAttendanceCount || 0}</div>
             <div className="text-sm text-gray-500 font-medium">Active Attendance</div>
           </div>
         </div>
