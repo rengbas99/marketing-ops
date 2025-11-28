@@ -594,7 +594,7 @@ export default function LeadDashboard() {
           onClick={() => navigate('/dashboard/attendance')}
           className="glass-card p-6 cursor-pointer hover:shadow-lg transition-all group"
         >
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <div className={`p-3 rounded-xl bg-green-50 group-hover:bg-green-100 transition-colors`}>
               <Clock className="w-6 h-6 text-green-600" />
             </div>
@@ -608,8 +608,10 @@ export default function LeadDashboard() {
               My Attendance
             </button>
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-1">{activeAttendance.length || 0}</div>
-          <div className="text-sm text-gray-500 font-medium">Active Attendance</div>
+          <div className="flex flex-col items-start">
+            <div className="text-3xl font-bold text-gray-900 mb-1 ml-1">{activeAttendance.length || 0}</div>
+            <div className="text-sm text-gray-500 font-medium">Active Attendance</div>
+          </div>
         </div>
         <StatCard
           icon={Users}
