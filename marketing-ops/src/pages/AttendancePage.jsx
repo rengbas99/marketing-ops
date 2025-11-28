@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LeadAttendanceDashboard from './LeadAttendanceDashboard';
-import { Clock, Calendar, TrendingUp, User, LogIn, LogOut, Edit2, X, ChevronLeft, ChevronRight, BarChart3, CheckCircle, FileText, Eye } from 'lucide-react';
+import { Clock, Calendar, TrendingUp, User, LogIn, LogOut, Edit2, X, ChevronLeft, ChevronRight, BarChart3, CheckCircle, FileText, Eye, ArrowRight } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES } from '../constants';
 import { canClockIn, findDuplicateClockIns, findStaleClockIns, shouldAutoClockOut } from '../utils/attendanceUtils';
@@ -23,6 +23,8 @@ export default function AttendancePage() {
     // Check URL parameter first
     const viewParam = searchParams.get('view');
     if (viewParam === 'personal') return 'personal';
+    if (viewParam === 'team') return 'team';
+    if (viewParam === 'daily-status') return 'daily-status';
     // Leads/Managers default to daily status dashboard
     return (user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD) ? 'daily-status' : 'personal';
   });
@@ -32,8 +34,17 @@ export default function AttendancePage() {
     const viewParam = searchParams.get('view');
     if (viewParam === 'personal' && viewMode !== 'personal') {
       setViewMode('personal');
+    } else if (viewParam === 'team' && viewMode !== 'team') {
+      setViewMode('team');
+    } else if (viewParam === 'daily-status' && viewMode !== 'daily-status') {
+      setViewMode('daily-status');
+    } else if (!viewParam && (user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD) && viewMode !== 'daily-status') {
+      // Default to daily-status for managers/leads when no param
+      setViewMode('daily-status');
+    } else if (!viewParam && viewMode !== 'personal') {
+      setViewMode('personal');
     }
-  }, [searchParams, viewMode]);
+  }, [searchParams, viewMode, user?.role]);
   const [elapsedTime, setElapsedTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [editingAttendance, setEditingAttendance] = useState(null);
   const [editClockOut, setEditClockOut] = useState('');
@@ -679,42 +690,74 @@ export default function AttendancePage() {
         {/* View Mode Toggle */}
         {canViewTeam && (
           <div className="flex items-center gap-3">
-          <div className="glass-panel p-1 flex gap-1">
-            <button
-              onClick={() => setViewMode('daily-status')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'daily-status'
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-gray-500 hover:bg-gray-100'
-                }`}
-            >
-              Daily Status
-            </button>
-            <button
-              onClick={() => setViewMode('personal')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'personal'
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-gray-500 hover:bg-gray-100'
-                }`}
-            >
-              My Attendance
-            </button>
-            <button
-              onClick={() => setViewMode('team')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'team'
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-gray-500 hover:bg-gray-100'
-                }`}
-            >
-              Team History
-            </button>
-            </div>
-            <button
-              onClick={() => navigate('/dashboard/daily-reports')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
-            >
-              <FileText className="w-4 h-4" />
-              Daily Reports
-            </button>
+            {viewMode === 'personal' ? (
+              // Personal view: Show button to go back to team view
+              <>
+                <button
+                  onClick={() => navigate('/dashboard/attendance')}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-md"
+                >
+                  <ArrowRight className="w-4 h-4 rotate-180" />
+                  View Team Status
+                </button>
+                <button
+                  onClick={() => navigate('/dashboard/daily-reports')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
+                >
+                  <FileText className="w-4 h-4" />
+                  Daily Reports
+                </button>
+              </>
+            ) : (
+              // Team view: Show all toggle buttons
+              <>
+                <div className="glass-panel p-1 flex gap-1">
+                  <button
+                    onClick={() => {
+                      setViewMode('daily-status');
+                      navigate('/dashboard/attendance?view=daily-status');
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'daily-status'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'text-gray-500 hover:bg-gray-100'
+                      }`}
+                  >
+                    Daily Status
+                  </button>
+                  <button
+                    onClick={() => {
+                      setViewMode('personal');
+                      navigate('/dashboard/attendance?view=personal');
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'personal'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'text-gray-500 hover:bg-gray-100'
+                      }`}
+                  >
+                    My Attendance
+                  </button>
+                  <button
+                    onClick={() => {
+                      setViewMode('team');
+                      navigate('/dashboard/attendance?view=team');
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'team'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'text-gray-500 hover:bg-gray-100'
+                      }`}
+                  >
+                    Team History
+                  </button>
+                </div>
+                <button
+                  onClick={() => navigate('/dashboard/daily-reports')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
+                >
+                  <FileText className="w-4 h-4" />
+                  Daily Reports
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -848,7 +891,7 @@ export default function AttendancePage() {
           {canViewTeam && (
             <div className="flex items-center gap-2 text-sm font-medium text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
               <BarChart3 className="w-4 h-4" />
-              <span>Viewing: {viewMode === 'team' ? 'Team Attendance' : 'My Attendance'}</span>
+              <span>Viewing: {viewMode === 'team' ? 'Team History' : viewMode === 'daily-status' ? 'Daily Status' : 'My Attendance'}</span>
             </div>
           )}
         </div>
@@ -867,17 +910,10 @@ export default function AttendancePage() {
           monthEnd.setMonth(monthEnd.getMonth() + 1);
           monthEnd.setDate(0);
 
-          // Filter to show only today's records for team history view
-          const today = new Date().toISOString().split('T')[0];
+          // Filter attendance records based on view mode and selected month
           const monthAttendance = userAttendance.filter(a => {
             const date = getRecordDate(a);
-            // For team history view, only show today's records
-            if (viewMode === 'team') {
-              const recordDate = a.date ? new Date(a.date).toISOString().split('T')[0] : 
-                               (a.clock_in ? new Date(a.clock_in).toISOString().split('T')[0] : '');
-              return recordDate === today;
-            }
-            // For personal view, show all records in selected month
+            // For all views, show records in selected month
             return date && date >= monthStart && date <= monthEnd;
           }).sort((a, b) => {
             const dateA = getRecordDate(a);

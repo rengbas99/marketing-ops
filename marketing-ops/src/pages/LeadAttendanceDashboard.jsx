@@ -11,6 +11,7 @@ export default function LeadAttendanceDashboard() {
   const { data, loading, startPolling, stopPolling } = useData();
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     startPolling('lead-attendance-dashboard', [
@@ -22,6 +23,14 @@ export default function LeadAttendanceDashboard() {
     ]);
     return () => stopPolling('lead-attendance-dashboard');
   }, [startPolling, stopPolling]);
+
+  // Update current time every second for real-time elapsed time display
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const attendance = Array.isArray(data.Attendance) ? data.Attendance : [];
   const users = Array.isArray(data.Users) ? data.Users : [];
@@ -53,12 +62,11 @@ export default function LeadAttendanceDashboard() {
         const isClockedIn = memberAttendance.status === 'clocked_in' && !memberAttendance.clock_out;
         const isClockedOut = memberAttendance.status === 'clocked_out' || (memberAttendance.clock_in && memberAttendance.clock_out);
         
-        // Calculate elapsed time if clocked in
+        // Calculate elapsed time if clocked in (using currentTime for real-time updates)
         let elapsedTime = null;
         if (isClockedIn && memberAttendance.clock_in) {
           const clockInTime = new Date(memberAttendance.clock_in);
-          const now = new Date();
-          const diff = now - clockInTime;
+          const diff = currentTime - clockInTime;
           const hours = Math.floor(diff / (1000 * 60 * 60));
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
           elapsedTime = { hours, minutes };
@@ -102,7 +110,7 @@ export default function LeadAttendanceDashboard() {
     });
 
     return statusMap;
-  }, [teamMembers, attendance, selectedDate, breaks]);
+  }, [teamMembers, attendance, selectedDate, breaks, currentTime]);
 
   // Separate into clocked in and clocked out
   const { clockedInMembers, clockedOutMembers, notClockedIn } = useMemo(() => {
@@ -152,6 +160,7 @@ export default function LeadAttendanceDashboard() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
             className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
           />
           <button
