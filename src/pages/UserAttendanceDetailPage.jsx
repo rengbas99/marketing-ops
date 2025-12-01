@@ -20,6 +20,15 @@ export default function UserAttendanceDetailPage() {
   const [editHours, setEditHours] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Decode URL parameter for email addresses
+  const decodedUserId = useMemo(() => {
+    try {
+      return decodeURIComponent(userId || '');
+    } catch {
+      return userId || '';
+    }
+  }, [userId]);
+
   useEffect(() => {
     startPolling('user-attendance-detail', [
       COLLECTIONS.ATTENDANCE,
@@ -35,16 +44,16 @@ export default function UserAttendanceDetailPage() {
 
   // Get the user being viewed
   const viewUser = useMemo(() => {
-    return users.find(u => u && u.email === userId);
-  }, [users, userId]);
+    return users.find(u => u && u.email === decodedUserId);
+  }, [users, decodedUserId]);
 
   // Check permissions
   const canEdit = user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD;
 
   // Get user's attendance records
   const userAttendance = useMemo(() => {
-    return attendance.filter(a => a && a.employee_id === userId);
-  }, [attendance, userId]);
+    return attendance.filter(a => a && a.employee_id === decodedUserId);
+  }, [attendance, decodedUserId]);
 
   // Filter by selected month
   const monthAttendance = useMemo(() => {
@@ -65,16 +74,51 @@ export default function UserAttendanceDetailPage() {
       });
   }, [userAttendance, selectedMonth]);
 
-  // Calculate monthly stats
+  // Calculate monthly stats - improved calculation
   const monthlyStats = useMemo(() => {
     let totalHours = 0;
     let totalBreakMinutes = 0;
     let daysWorked = 0;
 
     monthAttendance.forEach(a => {
+      // Calculate hours worked - prefer stored value, but recalculate if needed
+      let hours = 0;
       if (a.hours_worked) {
-        totalHours += parseFloat(a.hours_worked);
+        hours = parseFloat(a.hours_worked);
+        // Validate hours (should be reasonable - max 24 hours per day)
+        if (hours > 24 || hours < 0) {
+          // Recalculate from clock in/out times if stored value seems invalid
+          if (a.clock_in && a.clock_out) {
+            try {
+              const clockInTime = new Date(a.clock_in);
+              const clockOutTime = new Date(a.clock_out);
+              const totalMinutes = (clockOutTime - clockInTime) / (1000 * 60);
+              const breakMinutes = parseFloat(a.total_break_duration || 0);
+              const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+              hours = workMinutes / 60;
+            } catch {
+              hours = 0;
+            }
+          } else {
+            hours = 0;
+          }
+        }
+      } else if (a.clock_in && a.clock_out) {
+        // Calculate from times if hours_worked not set
+        try {
+          const clockInTime = new Date(a.clock_in);
+          const clockOutTime = new Date(a.clock_out);
+          const totalMinutes = (clockOutTime - clockInTime) / (1000 * 60);
+          const breakMinutes = parseFloat(a.total_break_duration || 0);
+          const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+          hours = workMinutes / 60;
+        } catch {
+          hours = 0;
+        }
       }
+      
+      totalHours += hours;
+      
       if (a.total_break_duration) {
         totalBreakMinutes += parseFloat(a.total_break_duration);
       }

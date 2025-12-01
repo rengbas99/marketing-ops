@@ -549,10 +549,10 @@ export default function ShootsPage() {
 
       {/* Edit Shoot Modal */}
       {showEditModal && editingShoot && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
           <div
             className="fixed inset-0 transition-opacity"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setShowEditModal(false);
@@ -560,7 +560,7 @@ export default function ShootsPage() {
               }
             }}
           />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh] my-4" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Edit Shoot</h3>
               <button
@@ -938,13 +938,13 @@ export default function ShootsPage() {
 
       {/* Assign Shoot Modal */}
       {showShootAssignment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
           <div
             className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
             onClick={() => setShowShootAssignment(false)}
           />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh] my-4" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
               <button
