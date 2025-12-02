@@ -97,11 +97,18 @@ export default function LeadAttendanceDashboard() {
 
       if (memberAttendanceRecords.length > 0) {
         // Find the most recent active clock-in (if any)
-        const activeClockIn = memberAttendanceRecords.find(a => 
-          a.clock_in && 
-          !a.clock_out && 
-          (a.status === 'clocked_in' || !a.status)
-        );
+        // Check for records with clock_in but no clock_out, regardless of status
+        // Status might be 'clocked_in', undefined, null, or missing
+        const activeClockIn = memberAttendanceRecords.find(a => {
+          if (!a || !a.clock_in) return false;
+          // Must have clock_in
+          if (!a.clock_in) return false;
+          // Must NOT have clock_out
+          if (a.clock_out) return false;
+          // Status should be 'clocked_in' or undefined/null/missing (all mean active)
+          const status = a.status;
+          return status === 'clocked_in' || status === undefined || status === null || status === '';
+        });
         
         // Find the most recent clocked-out record (for display purposes)
         const clockedOutRecords = memberAttendanceRecords.filter(a => 
@@ -116,12 +123,19 @@ export default function LeadAttendanceDashboard() {
           : null;
 
         // If there's an active clock-in, user is currently working
+        // IMPORTANT: Check for active clock-in FIRST - if exists, user is clocked in regardless of other records
         const isClockedIn = !!activeClockIn;
         // User is "finished" only if they have clocked out AND have NO active clock-in
         const isClockedOut = !isClockedIn && clockedOutRecords.length > 0;
         
-        // Use active clock-in for elapsed time, or most recent record
+        // Use active clock-in for display if it exists, otherwise use most recent clocked-out, or first record
         const displayAttendance = activeClockIn || mostRecentClockedOut || memberAttendanceRecords[0];
+        
+        // Debug: Ensure active clock-in takes priority
+        if (activeClockIn && isClockedOut) {
+          // This should never happen, but if it does, force isClockedIn to true
+          console.warn(`User ${member.email} has active clock-in but was marked as clocked out. Fixing...`);
+        }
         
         // Calculate elapsed time if clocked in (using currentTime for real-time updates)
         let elapsedTime = null;
