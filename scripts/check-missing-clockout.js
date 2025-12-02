@@ -100,6 +100,14 @@ async function checkMissingClockOut() {
       
       // Check if record has clock_in but no clock_out
       if (data.clock_in && !data.clock_out) {
+        // Skip today's records (people might still be working)
+        const recordDate = data.date ? new Date(data.date).toISOString().split('T')[0] : 
+                          (data.clock_in ? new Date(data.clock_in).toISOString().split('T')[0] : null);
+        const today = new Date().toISOString().split('T')[0];
+        if (recordDate === today) {
+          return; // Skip today's records
+        }
+        
         // Filter by employee email if provided (trim both for comparison)
         if (employeeEmail && data.employee_id?.trim() !== employeeEmail.trim()) {
           return;
@@ -107,9 +115,8 @@ async function checkMissingClockOut() {
         
         // Filter by month if provided
         if (month) {
-          const recordDate = data.date ? new Date(data.date) : (data.clock_in ? new Date(data.clock_in) : null);
           if (recordDate) {
-            const recordMonth = recordDate.toISOString().slice(0, 7); // YYYY-MM
+            const recordMonth = recordDate.slice(0, 7); // YYYY-MM
             if (recordMonth !== month) {
               return;
             }

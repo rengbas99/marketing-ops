@@ -18,9 +18,11 @@
     "migrate": "node scripts/migrate-to-firebase.js",
     "migrate:dry-run": "node scripts/migrate-to-firebase.js --dry-run",
     "check-clockout": "node scripts/check-missing-clockout.js",
-    "check-clockout:alan-dec": "node scripts/check-missing-clockout.js --employee=Alan@reformmedia.co.uk --month=2024-12",
+    "check-clockout:alan-dec": "node scripts/check-missing-clockout.js --employee=Alan@reformmedia.co.uk --month=2025-12",
     "apply-clockout": "node scripts/check-missing-clockout.js --apply",
-    "apply-clockout:alan-dec": "node scripts/check-missing-clockout.js --employee=Alan@reformmedia.co.uk --month=2024-12 --apply"
+    "apply-clockout:alan-dec": "node scripts/check-missing-clockout.js --employee=Alan@reformmedia.co.uk --month=2025-12 --apply",
+    "remove-today-clockout": "node scripts/remove-today-clockout.js",
+    "remove-today-clockout:apply": "node scripts/remove-today-clockout.js --apply"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
