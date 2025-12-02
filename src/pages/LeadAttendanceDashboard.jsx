@@ -56,10 +56,30 @@ export default function LeadAttendanceDashboard() {
     // Helper to get date from record (check both date field and clock_in timestamp)
     const getRecordDate = (record) => {
       if (record.date) {
-        return new Date(record.date).toISOString().split('T')[0];
+        // Handle Firestore Timestamp, Date object, or string
+        let dateValue = record.date;
+        if (dateValue && typeof dateValue === 'object' && dateValue.toDate) {
+          dateValue = dateValue.toDate();
+        }
+        if (dateValue instanceof Date) {
+          return dateValue.toISOString().split('T')[0];
+        }
+        if (typeof dateValue === 'string') {
+          return new Date(dateValue).toISOString().split('T')[0];
+        }
       }
       if (record.clock_in) {
-        return new Date(record.clock_in).toISOString().split('T')[0];
+        // Handle Firestore Timestamp, Date object, or string
+        let clockInValue = record.clock_in;
+        if (clockInValue && typeof clockInValue === 'object' && clockInValue.toDate) {
+          clockInValue = clockInValue.toDate();
+        }
+        if (clockInValue instanceof Date) {
+          return clockInValue.toISOString().split('T')[0];
+        }
+        if (typeof clockInValue === 'string') {
+          return new Date(clockInValue).toISOString().split('T')[0];
+        }
       }
       return null;
     };
