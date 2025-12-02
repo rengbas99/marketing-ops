@@ -58,9 +58,6 @@ export default function DashboardLayout({ children }) {
     if ([ROLES.MANAGER, ROLES.LEAD, ROLES.PHOTOGRAPHER, ROLES.CONTENT_CREATOR].includes(user?.role)) {
       productionItems.push({ path: '/dashboard/shoots', icon: Camera, label: 'Shoots' });
     }
-    if ([ROLES.MANAGER, ROLES.LEAD, ROLES.CONTENT_CREATOR].includes(user?.role)) {
-      productionItems.push({ path: '/dashboard/assign-shoot', icon: Camera, label: 'Assign Shoot' });
-    }
     if ([ROLES.MANAGER, ROLES.LEAD, ROLES.EDITOR, ROLES.CONTENT_CREATOR].includes(user?.role)) {
       productionItems.push({ path: '/dashboard/assign-tasks', icon: FileEdit, label: 'Tasks' });
     }
