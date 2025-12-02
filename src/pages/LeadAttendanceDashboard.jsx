@@ -55,8 +55,13 @@ export default function LeadAttendanceDashboard() {
     
     // Helper to get date from record (check both date field and clock_in timestamp)
     const getRecordDate = (record) => {
+      // Check date field first (it's usually a string like "2025-12-02")
       if (record.date) {
-        // Handle Firestore Timestamp, Date object, or string
+        if (typeof record.date === 'string') {
+          // Already in correct format, just return it
+          return record.date.split('T')[0];
+        }
+        // Handle Firestore Timestamp, Date object
         let dateValue = record.date;
         if (dateValue && typeof dateValue === 'object' && dateValue.toDate) {
           dateValue = dateValue.toDate();
@@ -64,10 +69,8 @@ export default function LeadAttendanceDashboard() {
         if (dateValue instanceof Date) {
           return dateValue.toISOString().split('T')[0];
         }
-        if (typeof dateValue === 'string') {
-          return new Date(dateValue).toISOString().split('T')[0];
-        }
       }
+      // Fallback to clock_in if date field not available
       if (record.clock_in) {
         // Handle Firestore Timestamp, Date object, or string
         let clockInValue = record.clock_in;
@@ -78,7 +81,10 @@ export default function LeadAttendanceDashboard() {
           return clockInValue.toISOString().split('T')[0];
         }
         if (typeof clockInValue === 'string') {
-          return new Date(clockInValue).toISOString().split('T')[0];
+          const parsed = new Date(clockInValue);
+          if (!isNaN(parsed.getTime())) {
+            return parsed.toISOString().split('T')[0];
+          }
         }
       }
       return null;
@@ -107,6 +113,22 @@ export default function LeadAttendanceDashboard() {
           const status = a.status;
           return status === 'clocked_in' || status === undefined || status === null || status === '';
         });
+        
+        // Debug logging for Alan
+        if (member.email && member.email.includes('Alan')) {
+          console.log('[DEBUG LeadDashboard]', {
+            email: member.email,
+            recordsCount: memberAttendanceRecords.length,
+            activeClockIn: !!activeClockIn,
+            records: memberAttendanceRecords.map(r => ({
+              id: r.attendance_id?.substring(0, 8),
+              date: r.date,
+              clock_in: r.clock_in,
+              clock_out: r.clock_out,
+              status: r.status
+            }))
+          });
+        }
         
         // Find the most recent clocked-out record (for display purposes)
         const clockedOutRecords = memberAttendanceRecords.filter(a => 
