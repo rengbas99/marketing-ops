@@ -758,37 +758,38 @@ export default function AttendancePage() {
 
   const usersToDisplayRaw = getUsersToDisplay();
   
-  // Sort users: active clock-ins first, then others
+  // Helper to check if user has active clock-in today (with proper date handling)
   const today = new Date().toISOString().split('T')[0];
+  const hasActiveClockIn = (userEmail) => {
+    const userRecords = attendance.filter(att => {
+      if (!att || !att.employee_id) return false;
+      if (att.employee_id.trim() !== userEmail.trim()) return false;
+      const recordDate = getRecordDate(att);
+      if (!recordDate) return false;
+      // Convert Date object to string for comparison
+      const recordDateStr = recordDate instanceof Date 
+        ? recordDate.toISOString().split('T')[0] 
+        : (typeof recordDate === 'string' ? recordDate : String(recordDate));
+      return recordDateStr === today;
+    });
+    
+    return userRecords.some(att => {
+      if (!att.clock_in || att.clock_out) return false;
+      const status = att.status;
+      return status === 'clocked_in' || status === undefined || status === null || status === '';
+    });
+  };
   
-  const usersToDisplay = [...usersToDisplayRaw].sort((a, b) => {
-    // Helper to check if user has active clock-in today
-    const hasActiveClockIn = (userEmail) => {
-      const userRecords = attendance.filter(att => {
-        if (!att || !att.employee_id) return false;
-        if (att.employee_id.trim() !== userEmail.trim()) return false;
-        const recordDate = getRecordDate(att);
-        // Compare dates properly (handle Date objects)
-        const recordDateStr = recordDate instanceof Date ? recordDate.toISOString().split('T')[0] : recordDate;
-        return recordDateStr === today;
-      });
-      
-      return userRecords.some(att => {
-        if (!att.clock_in || att.clock_out) return false;
-        const status = att.status;
-        return status === 'clocked_in' || status === undefined || status === null || status === '';
-      });
-    };
-    
-    const aActive = hasActiveClockIn(a.email);
-    const bActive = hasActiveClockIn(b.email);
-    
-    // Active clock-ins first
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
-    // Then sort alphabetically by name
-    return (a.name || a.email).localeCompare(b.name || b.email);
-  });
+  // Group users into active and non-active
+  const activeUsers = usersToDisplayRaw.filter(u => hasActiveClockIn(u.email));
+  const inactiveUsers = usersToDisplayRaw.filter(u => !hasActiveClockIn(u.email));
+  
+  // Sort each group alphabetically
+  activeUsers.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  inactiveUsers.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  
+  // Combine: active first, then inactive
+  const usersToDisplay = [...activeUsers, ...inactiveUsers];
 
   if (loading.all) {
     return (
@@ -1051,7 +1052,7 @@ export default function AttendancePage() {
       {/* Attendance Summary */}
       <div className="space-y-6">
         {usersToDisplay.map((displayUser, userIndex) => {
-    const monthlyHours = calculateMonthlyHours(displayUser.email, selectedMonth);
+          const monthlyHours = calculateMonthlyHours(displayUser.email, selectedMonth);
           const userAttendance = attendance.filter(
             a => a && a.employee_id === displayUser.email
           );
@@ -1072,12 +1073,31 @@ export default function AttendancePage() {
             return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
           });
 
+          // Check if this is the first inactive user (to add separator)
+          const isFirstInactive = userIndex === activeUsers.length && inactiveUsers.length > 0;
+          const isActive = activeUsers.some(u => u.email === displayUser.email);
+
           return (
-            <div
-              key={displayUser.email || userIndex}
-              className="glass-card p-6 animate-fadeIn"
-              style={{ animationDelay: `${userIndex * 0.1}s` }}
-            >
+            <>
+              {/* Separator bar between active and inactive users */}
+              {isFirstInactive && (
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t-2 border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white dark:bg-gray-900 px-4 text-sm font-bold text-gray-500 uppercase tracking-wider">
+                      Not Currently Working
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <div
+                key={displayUser.email || userIndex}
+                className="glass-card p-6 animate-fadeIn"
+                style={{ animationDelay: `${userIndex * 0.1}s` }}
+              >
               {/* User Header */}
               {(() => {
                 // Check if user is currently clocked in (using same logic as LeadAttendanceDashboard)
@@ -1086,8 +1106,11 @@ export default function AttendancePage() {
                   if (!a || !a.employee_id) return false;
                   if (a.employee_id.trim() !== displayUser.email.trim()) return false;
                   const recordDate = getRecordDate(a);
-                  // Compare dates properly (handle Date objects)
-                  const recordDateStr = recordDate instanceof Date ? recordDate.toISOString().split('T')[0] : recordDate;
+                  if (!recordDate) return false;
+                  // Convert Date object to string for comparison
+                  const recordDateStr = recordDate instanceof Date 
+                    ? recordDate.toISOString().split('T')[0] 
+                    : (typeof recordDate === 'string' ? recordDate : String(recordDate));
                   return recordDateStr === today;
                 });
                 
@@ -1349,6 +1372,7 @@ export default function AttendancePage() {
                 </div>
               )}
             </div>
+            </>
           );
         })}
       </div>
