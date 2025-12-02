@@ -96,9 +96,36 @@ export default function LeadAttendanceDashboard() {
         if (!a || !a.employee_id) return false;
         // Match employee email (trim to handle spaces)
         if (a.employee_id.trim() !== member.email.trim()) return false;
-        // Check if record is from the selected date
-        const recordDate = getRecordDate(a);
-        return recordDate === selectedDate;
+        
+        // Check date field first (it's usually a string like "2025-12-02")
+        let recordDateStr = null;
+        if (a.date) {
+          if (typeof a.date === 'string') {
+            recordDateStr = a.date.split('T')[0]; // Handle "2025-12-02" or "2025-12-02T..."
+          } else if (a.date instanceof Date) {
+            recordDateStr = a.date.toISOString().split('T')[0];
+          } else if (a.date && typeof a.date === 'object' && a.date.toDate) {
+            recordDateStr = a.date.toDate().toISOString().split('T')[0];
+          }
+        }
+        
+        // Fallback to clock_in if date field not available
+        if (!recordDateStr && a.clock_in) {
+          const clockInDate = new Date(a.clock_in);
+          if (!isNaN(clockInDate.getTime())) {
+            recordDateStr = clockInDate.toISOString().split('T')[0];
+          }
+        }
+        
+        // Fallback to getRecordDate if both above fail
+        if (!recordDateStr) {
+          const recordDate = getRecordDate(a);
+          if (recordDate) {
+            recordDateStr = typeof recordDate === 'string' ? recordDate.split('T')[0] : recordDate.toISOString().split('T')[0];
+          }
+        }
+        
+        return recordDateStr === selectedDate;
       });
 
       if (memberAttendanceRecords.length > 0) {
