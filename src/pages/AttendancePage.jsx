@@ -756,7 +756,39 @@ export default function AttendancePage() {
     return [];
   };
 
-  const usersToDisplay = getUsersToDisplay();
+  const usersToDisplayRaw = getUsersToDisplay();
+  
+  // Sort users: active clock-ins first, then others
+  const today = new Date().toISOString().split('T')[0];
+  
+  const usersToDisplay = [...usersToDisplayRaw].sort((a, b) => {
+    // Helper to check if user has active clock-in today
+    const hasActiveClockIn = (userEmail) => {
+      const userRecords = attendance.filter(att => {
+        if (!att || !att.employee_id) return false;
+        if (att.employee_id.trim() !== userEmail.trim()) return false;
+        const recordDate = getRecordDate(att);
+        // Compare dates properly (handle Date objects)
+        const recordDateStr = recordDate instanceof Date ? recordDate.toISOString().split('T')[0] : recordDate;
+        return recordDateStr === today;
+      });
+      
+      return userRecords.some(att => {
+        if (!att.clock_in || att.clock_out) return false;
+        const status = att.status;
+        return status === 'clocked_in' || status === undefined || status === null || status === '';
+      });
+    };
+    
+    const aActive = hasActiveClockIn(a.email);
+    const bActive = hasActiveClockIn(b.email);
+    
+    // Active clock-ins first
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    // Then sort alphabetically by name
+    return (a.name || a.email).localeCompare(b.name || b.email);
+  });
 
   if (loading.all) {
     return (
@@ -1048,11 +1080,25 @@ export default function AttendancePage() {
             >
               {/* User Header */}
               {(() => {
-                // Check if user is currently clocked in
+                // Check if user is currently clocked in (using same logic as LeadAttendanceDashboard)
                 const today = new Date().toISOString().split('T')[0];
-                const isCurrentlyClockedIn = attendance.some(
-                  a => a && a.employee_id === displayUser.email && a.date === today && a.status === 'clocked_in' && !a.clock_out
-                );
+                const userRecords = attendance.filter(a => {
+                  if (!a || !a.employee_id) return false;
+                  if (a.employee_id.trim() !== displayUser.email.trim()) return false;
+                  const recordDate = getRecordDate(a);
+                  // Compare dates properly (handle Date objects)
+                  const recordDateStr = recordDate instanceof Date ? recordDate.toISOString().split('T')[0] : recordDate;
+                  return recordDateStr === today;
+                });
+                
+                const activeClockIn = userRecords.find(a => {
+                  if (!a || !a.clock_in) return false;
+                  if (a.clock_out) return false;
+                  const status = a.status;
+                  return status === 'clocked_in' || status === undefined || status === null || status === '';
+                });
+                
+                const isCurrentlyClockedIn = !!activeClockIn;
                 
                 return (
                   <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
