@@ -765,29 +765,32 @@ export default function AttendancePage() {
       if (!att || !att.employee_id) return false;
       if (att.employee_id.trim() !== userEmail.trim()) return false;
       
-      // Try multiple ways to get the date
-      let recordDate = getRecordDate(att);
-      if (!recordDate) {
-        // Fallback: try to get date from clock_in directly
-        if (att.clock_in) {
-          recordDate = new Date(att.clock_in);
-        } else if (att.date) {
-          recordDate = typeof att.date === 'string' ? new Date(att.date) : att.date;
+      // Check date field first (it's usually a string like "2025-12-02")
+      let recordDateStr = null;
+      if (att.date) {
+        if (typeof att.date === 'string') {
+          recordDateStr = att.date.split('T')[0]; // Handle "2025-12-02" or "2025-12-02T..."
+        } else if (att.date instanceof Date) {
+          recordDateStr = att.date.toISOString().split('T')[0];
         }
       }
       
-      if (!recordDate) return false;
+      // Fallback to clock_in if date field not available
+      if (!recordDateStr && att.clock_in) {
+        const clockInDate = new Date(att.clock_in);
+        if (!isNaN(clockInDate.getTime())) {
+          recordDateStr = clockInDate.toISOString().split('T')[0];
+        }
+      }
       
-      // Convert Date object to string for comparison
-      let recordDateStr;
-      if (recordDate instanceof Date) {
-        recordDateStr = recordDate.toISOString().split('T')[0];
-      } else if (typeof recordDate === 'string') {
-        // If it's already a string, try to parse it
-        const parsed = new Date(recordDate);
-        recordDateStr = isNaN(parsed.getTime()) ? recordDate : parsed.toISOString().split('T')[0];
-      } else {
-        recordDateStr = String(recordDate);
+      // Fallback to getRecordDate if both above fail
+      if (!recordDateStr) {
+        const recordDate = getRecordDate(att);
+        if (recordDate) {
+          recordDateStr = recordDate instanceof Date 
+            ? recordDate.toISOString().split('T')[0] 
+            : String(recordDate).split('T')[0];
+        }
       }
       
       return recordDateStr === today;
@@ -1143,29 +1146,32 @@ export default function AttendancePage() {
                   if (!a || !a.employee_id) return false;
                   if (a.employee_id.trim() !== displayUser.email.trim()) return false;
                   
-                  // Try multiple ways to get the date
-                  let recordDate = getRecordDate(a);
-                  if (!recordDate) {
-                    // Fallback: try to get date from clock_in directly
-                    if (a.clock_in) {
-                      recordDate = new Date(a.clock_in);
-                    } else if (a.date) {
-                      recordDate = typeof a.date === 'string' ? new Date(a.date) : a.date;
+                  // Check date field first (it's usually a string like "2025-12-02")
+                  let recordDateStr = null;
+                  if (a.date) {
+                    if (typeof a.date === 'string') {
+                      recordDateStr = a.date.split('T')[0]; // Handle "2025-12-02" or "2025-12-02T..."
+                    } else if (a.date instanceof Date) {
+                      recordDateStr = a.date.toISOString().split('T')[0];
                     }
                   }
                   
-                  if (!recordDate) return false;
+                  // Fallback to clock_in if date field not available
+                  if (!recordDateStr && a.clock_in) {
+                    const clockInDate = new Date(a.clock_in);
+                    if (!isNaN(clockInDate.getTime())) {
+                      recordDateStr = clockInDate.toISOString().split('T')[0];
+                    }
+                  }
                   
-                  // Convert Date object to string for comparison
-                  let recordDateStr;
-                  if (recordDate instanceof Date) {
-                    recordDateStr = recordDate.toISOString().split('T')[0];
-                  } else if (typeof recordDate === 'string') {
-                    // If it's already a string, try to parse it
-                    const parsed = new Date(recordDate);
-                    recordDateStr = isNaN(parsed.getTime()) ? recordDate : parsed.toISOString().split('T')[0];
-                  } else {
-                    recordDateStr = String(recordDate);
+                  // Fallback to getRecordDate if both above fail
+                  if (!recordDateStr) {
+                    const recordDate = getRecordDate(a);
+                    if (recordDate) {
+                      recordDateStr = recordDate instanceof Date 
+                        ? recordDate.toISOString().split('T')[0] 
+                        : String(recordDate).split('T')[0];
+                    }
                   }
                   
                   return recordDateStr === today;
