@@ -13,6 +13,7 @@ import AssetWorkDetailsModal from '../../components/AssetWorkDetailsModal';
 import { Users, Camera, FileEdit, Calendar, Plus, Clock, LogIn, LogOut, Coffee, FileText, MapPin, AlertCircle, Eye, Edit, Plane, X } from 'lucide-react';
 import { formatBreakDuration, formatTime as formatTimeUtil } from '../../utils/timeFormatting';
 import { COLLECTIONS, SHOOT_STATUS, ASSET_STATUS, ROLES } from '../../constants';
+import { shouldAutoClockOut, findStaleClockIns } from '../../utils/attendanceUtils';
 
 export default function LeadDashboard() {
   const { data, loading, startPolling, stopPolling, addRow, updateRow, forceRefresh } = useData();
@@ -92,16 +93,74 @@ export default function LeadDashboard() {
       a => a && a.employee_id === user.email && a.date === today
     );
 
+    // Check if today's attendance should be auto clocked out (over 15 hours)
+    if (todayAtt && shouldAutoClockOut(todayAtt)) {
+      const staleIndex = attendance.findIndex(a => a && a.attendance_id === todayAtt.attendance_id);
+      if (staleIndex !== -1) {
+        const clockOutTime = new Date().toISOString();
+        const clockInTime = new Date(todayAtt.clock_in);
+        const totalMinutes = (new Date(clockOutTime) - clockInTime) / (1000 * 60);
+        const breakMinutes = parseFloat(todayAtt.total_break_duration || 0);
+        const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+        const hoursWorked = workMinutes / 60;
+
+        updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+          ...todayAtt,
+          clock_out: clockOutTime,
+          status: 'clocked_out',
+          hours_worked: hoursWorked.toFixed(2),
+          daily_report: todayAtt.daily_report || 'Auto clocked out after 15 hours',
+        }).then(() => {
+          forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
+        }).catch(console.error);
+
+        setClockedIn(false);
+        setTodayAttendance(null);
+        return;
+      }
+    }
+
+    // Auto clock-out all stale records (not just today's)
+    const staleRecords = findStaleClockIns(attendance.filter(
+      a => a && a.employee_id === user?.email
+    ));
+    
+    if (staleRecords.length > 0) {
+      staleRecords.forEach(record => {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === record.attendance_id);
+        if (staleIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTime = new Date(record.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTime) / (1000 * 60);
+          const breakMinutes = parseFloat(record.total_break_duration || 0);
+          const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hoursWorked = workMinutes / 60;
+
+          updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+            ...record,
+            clock_out: clockOutTime,
+            status: 'clocked_out',
+            hours_worked: hoursWorked.toFixed(2),
+            daily_report: record.daily_report || 'Auto clocked out after 15 hours',
+          }).catch(console.error);
+        }
+      });
+      
+      if (staleRecords.length > 0) {
+        forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
+      }
+    }
+
     if (todayAtt) {
       setTodayAttendance(todayAtt);
-      setClockedIn(todayAtt.status === 'clocked_in');
+      setClockedIn(todayAtt.status === 'clocked_in' && !todayAtt.clock_out);
     } else {
       if (!todayAttendance || todayAttendance.date !== today) {
         setTodayAttendance(null);
         setClockedIn(false);
       }
     }
-  }, [data, user, attendance, today, isClockInLoading, isClockOutLoading]);
+  }, [data, user, attendance, today, isClockInLoading, isClockOutLoading, updateRow, forceRefresh]);
 
   // Running timer logic
   useEffect(() => {

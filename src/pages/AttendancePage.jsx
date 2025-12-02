@@ -8,7 +8,7 @@ import LeadAttendanceDashboard from './LeadAttendanceDashboard';
 import { Clock, Calendar, TrendingUp, User, LogIn, LogOut, Edit2, X, ChevronLeft, ChevronRight, BarChart3, CheckCircle, FileText, Eye, ArrowRight } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES } from '../constants';
-import { canClockIn, findDuplicateClockIns, findStaleClockIns, shouldAutoClockOut } from '../utils/attendanceUtils';
+import { canClockIn, findDuplicateClockIns, findStaleClockIns, shouldAutoClockOut, applyClockOutTimes, autoClockOutStaleRecords } from '../utils/attendanceUtils';
 
 export default function AttendancePage() {
   const navigate = useNavigate();
@@ -54,6 +54,7 @@ export default function AttendancePage() {
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [isApplyingClockOut, setIsApplyingClockOut] = useState(false);
   const [activeBreak, setActiveBreak] = useState(null);
   const [showClockOutReport, setShowClockOutReport] = useState(false);
   const [clockOutReport, setClockOutReport] = useState('');
@@ -501,6 +502,68 @@ export default function AttendancePage() {
     }
   };
 
+  // Apply clock-out times for missing records (for managers/leads)
+  const handleApplyClockOutTimes = async (employeeEmail = null, month = null) => {
+    if (!canEditAttendance) {
+      error('Only managers and leads can apply clock-out times');
+      return;
+    }
+
+    setIsApplyingClockOut(true);
+    try {
+      const result = await applyClockOutTimes(attendance, {
+        employeeEmail,
+        month,
+        updateRow,
+        forceRefresh,
+        collection: COLLECTIONS.ATTENDANCE,
+        defaultClockOutHour: 17
+      });
+
+      if (result.updated > 0) {
+        success(`Successfully applied clock-out times to ${result.updated} record(s). ${result.errors > 0 ? `${result.errors} error(s) occurred.` : ''}`);
+      } else if (result.errors > 0) {
+        error(`Failed to apply clock-out times. ${result.errors} error(s) occurred.`);
+      } else {
+        success('No records found that need clock-out times applied.');
+      }
+    } catch (err) {
+      error('Error applying clock-out times: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsApplyingClockOut(false);
+    }
+  };
+
+  // Auto clock-out all stale records (over 15 hours)
+  const handleAutoClockOutStale = async () => {
+    if (!canEditAttendance) {
+      error('Only managers and leads can auto clock-out stale records');
+      return;
+    }
+
+    setIsApplyingClockOut(true);
+    try {
+      const result = await autoClockOutStaleRecords(
+        attendance,
+        updateRow,
+        forceRefresh,
+        COLLECTIONS.ATTENDANCE
+      );
+
+      if (result.updated > 0) {
+        success(`Successfully auto clocked-out ${result.updated} stale record(s). ${result.errors > 0 ? `${result.errors} error(s) occurred.` : ''}`);
+      } else if (result.errors > 0) {
+        error(`Failed to auto clock-out stale records. ${result.errors} error(s) occurred.`);
+      } else {
+        success('No stale records found.');
+      }
+    } catch (err) {
+      error('Error auto clocking-out stale records: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsApplyingClockOut(false);
+    }
+  };
+
   const parseDateValue = (value) => {
     if (!value) return null;
     const nativeDate = new Date(value);
@@ -709,7 +772,7 @@ export default function AttendancePage() {
 
         {/* View Mode Toggle */}
         {canViewTeam && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {viewMode === 'personal' ? (
               // Personal view: Show button to go back to team view
               <>
@@ -776,6 +839,25 @@ export default function AttendancePage() {
                   <FileText className="w-4 h-4" />
                   Daily Reports
                 </button>
+                {/* Utility buttons for managers/leads */}
+                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                  <button
+                    onClick={() => handleApplyClockOutTimes('Alan@reformmedia.co.uk', '2024-12')}
+                    disabled={isApplyingClockOut}
+                    className="px-3 py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Apply clock-out times for Alan's December records"
+                  >
+                    {isApplyingClockOut ? 'Applying...' : 'Fix Alan Dec'}
+                  </button>
+                  <button
+                    onClick={handleAutoClockOutStale}
+                    disabled={isApplyingClockOut}
+                    className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Auto clock-out all records over 15 hours"
+                  >
+                    {isApplyingClockOut ? 'Processing...' : 'Auto Clock-Out Stale'}
+                  </button>
+                </div>
               </>
             )}
           </div>
