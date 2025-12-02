@@ -764,12 +764,32 @@ export default function AttendancePage() {
     const userRecords = attendance.filter(att => {
       if (!att || !att.employee_id) return false;
       if (att.employee_id.trim() !== userEmail.trim()) return false;
-      const recordDate = getRecordDate(att);
+      
+      // Try multiple ways to get the date
+      let recordDate = getRecordDate(att);
+      if (!recordDate) {
+        // Fallback: try to get date from clock_in directly
+        if (att.clock_in) {
+          recordDate = new Date(att.clock_in);
+        } else if (att.date) {
+          recordDate = typeof att.date === 'string' ? new Date(att.date) : att.date;
+        }
+      }
+      
       if (!recordDate) return false;
+      
       // Convert Date object to string for comparison
-      const recordDateStr = recordDate instanceof Date 
-        ? recordDate.toISOString().split('T')[0] 
-        : (typeof recordDate === 'string' ? recordDate : String(recordDate));
+      let recordDateStr;
+      if (recordDate instanceof Date) {
+        recordDateStr = recordDate.toISOString().split('T')[0];
+      } else if (typeof recordDate === 'string') {
+        // If it's already a string, try to parse it
+        const parsed = new Date(recordDate);
+        recordDateStr = isNaN(parsed.getTime()) ? recordDate : parsed.toISOString().split('T')[0];
+      } else {
+        recordDateStr = String(recordDate);
+      }
+      
       return recordDateStr === today;
     });
     
@@ -1105,12 +1125,32 @@ export default function AttendancePage() {
                 const userRecords = attendance.filter(a => {
                   if (!a || !a.employee_id) return false;
                   if (a.employee_id.trim() !== displayUser.email.trim()) return false;
-                  const recordDate = getRecordDate(a);
+                  
+                  // Try multiple ways to get the date
+                  let recordDate = getRecordDate(a);
+                  if (!recordDate) {
+                    // Fallback: try to get date from clock_in directly
+                    if (a.clock_in) {
+                      recordDate = new Date(a.clock_in);
+                    } else if (a.date) {
+                      recordDate = typeof a.date === 'string' ? new Date(a.date) : a.date;
+                    }
+                  }
+                  
                   if (!recordDate) return false;
+                  
                   // Convert Date object to string for comparison
-                  const recordDateStr = recordDate instanceof Date 
-                    ? recordDate.toISOString().split('T')[0] 
-                    : (typeof recordDate === 'string' ? recordDate : String(recordDate));
+                  let recordDateStr;
+                  if (recordDate instanceof Date) {
+                    recordDateStr = recordDate.toISOString().split('T')[0];
+                  } else if (typeof recordDate === 'string') {
+                    // If it's already a string, try to parse it
+                    const parsed = new Date(recordDate);
+                    recordDateStr = isNaN(parsed.getTime()) ? recordDate : parsed.toISOString().split('T')[0];
+                  } else {
+                    recordDateStr = String(recordDate);
+                  }
+                  
                   return recordDateStr === today;
                 });
                 
