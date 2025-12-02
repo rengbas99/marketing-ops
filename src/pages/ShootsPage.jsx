@@ -53,6 +53,18 @@ export default function ShootsPage() {
     return () => stopPolling('shoots-page');
   }, [startPolling, stopPolling]);
 
+  // Prevent body scroll when modals are open
+  useEffect(() => {
+    if (showShootAssignment || showEditModal || showStartForm || showBreakDialog || showWorkLinks) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showShootAssignment, showEditModal, showStartForm, showBreakDialog, showWorkLinks]);
+
   const breaks = Array.isArray(data.Time_Breaks) ? data.Time_Breaks : [];
   const shoots = Array.isArray(data.Shoots) ? data.Shoots : [];
   const attendance = Array.isArray(data.Photographer_Attendance) ? data.Photographer_Attendance : [];
@@ -537,10 +549,10 @@ export default function ShootsPage() {
 
       {/* Edit Shoot Modal */}
       {showEditModal && editingShoot && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
           <div
             className="fixed inset-0 transition-opacity"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
+            style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setShowEditModal(false);
@@ -548,7 +560,7 @@ export default function ShootsPage() {
               }
             }}
           />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh]" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Edit Shoot</h3>
               <button
@@ -648,7 +660,7 @@ export default function ShootsPage() {
           )}
           {(user?.role === ROLES.LEAD || user?.role === ROLES.MANAGER || user?.role === ROLES.CONTENT_CREATOR) && (
             <button
-              onClick={() => setShowShootAssignment(true)}
+              onClick={() => navigate('/dashboard/assign-shoot')}
               className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/30"
             >
               <Plus className="w-5 h-5" />
@@ -926,13 +938,13 @@ export default function ShootsPage() {
 
       {/* Assign Shoot Modal */}
       {showShootAssignment && (
-        <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 pt-32 md:pt-10">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
           <div
             className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
+            style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
             onClick={() => setShowShootAssignment(false)}
           />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh] mt-0 md:mt-0" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh]" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
               <button

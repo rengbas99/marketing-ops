@@ -17,13 +17,15 @@
     "preview": "vite preview",
     "migrate": "node scripts/migrate-to-firebase.js",
     "migrate:dry-run": "node scripts/migrate-to-firebase.js --dry-run",
+<<<<<<< HEAD
     "check-clockout": "node scripts/check-missing-clockout.js",
     "check-clockout:alan-dec": "node scripts/check-missing-clockout.js --employee=Alan@reformmedia.co.uk --month=2025-12",
     "apply-clockout": "node scripts/check-missing-clockout.js --apply",
     "apply-clockout:alan-dec": "node scripts/check-missing-clockout.js --employee=Alan@reformmedia.co.uk --month=2025-12 --apply",
     "remove-today-clockout": "node scripts/remove-today-clockout.js",
     "remove-today-clockout:apply": "node scripts/remove-today-clockout.js --apply",
-    "set-active-attendance": "node scripts/set-active-attendance.js"
+    "set-active-attendance": "node scripts/set-active-attendance.js",
+    "cleanup": "node scripts/cleanup-old-data.js"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",

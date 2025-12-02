@@ -12,6 +12,7 @@ import EditorDashboard from './pages/dashboard/EditorDashboard';
 import ContentCreatorDashboard from './pages/dashboard/ContentCreatorDashboard';
 import ClientsPage from './pages/ClientsPage';
 import ShootsPage from './pages/ShootsPage';
+import AssignShootPage from './pages/AssignShootPage';
 import CalendarPage from './pages/CalendarPage';
 import AssignTasksPage from './pages/AssignTasksPage';
 import TeamPage from './pages/TeamFeedPage';
@@ -129,6 +130,7 @@ function App() {
                   {/* Feature Pages */}
                   <Route path="clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
                   <Route path="shoots" element={<ProtectedRoute><ShootsPage /></ProtectedRoute>} />
+                  <Route path="assign-shoot" element={<ProtectedRoute allowedRoles={[ROLES.LEAD, ROLES.MANAGER, ROLES.CONTENT_CREATOR]}><AssignShootPage /></ProtectedRoute>} />
                   <Route path="calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
                   <Route path="assign-tasks" element={<ProtectedRoute><AssignTasksPage /></ProtectedRoute>} />
                   <Route path="team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />

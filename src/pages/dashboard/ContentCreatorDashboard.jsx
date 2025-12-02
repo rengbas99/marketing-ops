@@ -191,6 +191,7 @@ export default function ContentCreatorDashboard() {
       const clockInTime = new Date().toISOString();
       const today = new Date().toISOString().split('T')[0];
 
+<<<<<<< HEAD
       // Use utility function to check if can clock in (prevents multiple sessions on same day)
       const clockInCheck = canClockIn(attendance, user?.email, today);
       
@@ -368,10 +369,17 @@ export default function ContentCreatorDashboard() {
       const workMinutes = Math.max(0, totalMinutes - totalBreakMinutes);
       const hoursWorkedExcludingBreaks = workMinutes / 60;
 
-      const index = data.Attendance?.findIndex(
-        a => a.attendance_id === todayAttendance.attendance_id
+      // Use the attendance array extracted earlier, not data.Attendance
+      const index = attendance.findIndex(
+        a => a && a.attendance_id === todayAttendance.attendance_id
       );
 
+      if (index === -1) {
+        error('Attendance record not found. Please refresh the page and try again.');
+        setIsClockOutLoading(false);
+        return;
+      }
+      
       if (index !== -1) {
         await updateRow(COLLECTIONS.ATTENDANCE, index + 2, {
           ...todayAttendance,

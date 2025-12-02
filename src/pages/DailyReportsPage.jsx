@@ -97,6 +97,8 @@ export default function DailyReportsPage() {
           editorTimeLogs: [],
           photographerAttendance: [],
           totalHours: 0,
+          hasProcessedAttendanceHours: false, // Track if we've already counted attendance hours for this day
+          lastAttendanceHours: 0, // Track last attendance hours counted
           status: record.status === 'clocked_in' && !record.clock_out ? 'active' : 'clocked_out',
           clockIn: record.clock_in || null,
           clockOut: record.clock_out || null,
@@ -107,11 +109,54 @@ export default function DailyReportsPage() {
       const workerData = workerMap.get(email);
       workerData.attendance.push(record);
       
-      // Safely calculate hours
-      if (record.clock_out && record.hours_worked) {
-        const hours = parseFloat(record.hours_worked);
-        if (!isNaN(hours) && hours > 0) {
-          workerData.totalHours += hours;
+      // Safely calculate hours - only count once per day, prefer completed records
+      // If multiple records exist, use the one with clock_out (completed)
+      if (record.clock_out) {
+        let hours = 0;
+        
+        // Prefer stored hours_worked if valid
+        if (record.hours_worked) {
+          hours = parseFloat(record.hours_worked);
+          // Validate: hours should be reasonable (max 24 hours per day)
+          if (hours > 24 || hours < 0 || isNaN(hours)) {
+            hours = 0; // Invalid, will recalculate
+          }
+        }
+        
+        // Recalculate if hours_worked is invalid or missing
+        if (hours === 0 && record.clock_in && record.clock_out) {
+          try {
+            const inTime = safeParseDate(record.clock_in);
+            const outTime = safeParseDate(record.clock_out);
+            if (inTime && outTime && outTime > inTime) {
+              const totalMinutes = (outTime - inTime) / (1000 * 60);
+              const breakMinutes = parseFloat(record.total_break_duration || 0);
+              const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+              hours = workMinutes / 60;
+              // Validate calculated hours
+              if (hours > 24 || hours < 0) {
+                hours = 0;
+              }
+            }
+          } catch {
+            hours = 0;
+          }
+        }
+        
+        // Only add if we have valid hours and haven't already counted attendance for this day
+        // For attendance, only count once per day (prefer completed records)
+        if (hours > 0 && hours <= 24) {
+          if (!workerData.hasProcessedAttendanceHours) {
+            workerData.totalHours += hours;
+            workerData.hasProcessedAttendanceHours = true;
+          } else if (record.clock_out) {
+            // If we already counted but this is a completed record, replace the previous count
+            // (This handles cases where an incomplete record was counted first)
+            workerData.totalHours = (workerData.totalHours - (workerData.lastAttendanceHours || 0)) + hours;
+            workerData.lastAttendanceHours = hours;
+          }
+        } else if (hours > 0) {
+          workerData.lastAttendanceHours = hours;
         }
       }
     });
@@ -137,6 +182,8 @@ export default function DailyReportsPage() {
           editorTimeLogs: [],
           photographerAttendance: [],
           totalHours: 0,
+          hasProcessedAttendanceHours: false,
+          lastAttendanceHours: 0,
           status: log.end_time ? 'clocked_out' : 'active',
           clockIn: null,
           clockOut: null,
@@ -187,6 +234,8 @@ export default function DailyReportsPage() {
           editorTimeLogs: [],
           photographerAttendance: [],
           totalHours: 0,
+          hasProcessedAttendanceHours: false,
+          lastAttendanceHours: 0,
           status: pa.end_time ? 'clocked_out' : 'active',
           clockIn: pa.start_time || null,
           clockOut: pa.end_time || null,
