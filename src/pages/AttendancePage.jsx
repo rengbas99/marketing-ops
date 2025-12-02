@@ -801,7 +801,18 @@ export default function AttendancePage() {
   };
   
   // Group users into active and non-active
-  const activeUsers = usersToDisplayRaw.filter(u => hasActiveClockIn(u.email));
+  const activeUsers = usersToDisplayRaw.filter(u => {
+    const isActive = hasActiveClockIn(u.email);
+    // Debug logging for Alan
+    if (u.email && u.email.includes('Alan')) {
+      console.log(`[DEBUG] ${u.email} - Active: ${isActive}`, {
+        email: u.email,
+        today,
+        records: attendance.filter(a => a && a.employee_id && a.employee_id.trim() === u.email.trim())
+      });
+    }
+    return isActive;
+  });
   const inactiveUsers = usersToDisplayRaw.filter(u => !hasActiveClockIn(u.email));
   
   // Sort each group alphabetically
@@ -810,6 +821,12 @@ export default function AttendancePage() {
   
   // Combine: active first, then inactive
   const usersToDisplay = [...activeUsers, ...inactiveUsers];
+  
+  // Debug logging
+  if (viewMode === 'team') {
+    console.log('[DEBUG] Team View - Active Users:', activeUsers.map(u => u.email));
+    console.log('[DEBUG] Team View - Inactive Users:', inactiveUsers.map(u => u.email));
+  }
 
   if (loading.all) {
     return (
