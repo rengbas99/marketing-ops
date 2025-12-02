@@ -20,12 +20,16 @@ export default function UserAttendanceDetailPage() {
   const [editHours, setEditHours] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Decode URL parameter for email addresses
+  // Decode URL parameter for email addresses - handle both encoded and unencoded
   const decodedUserId = useMemo(() => {
+    if (!userId) return '';
     try {
-      return decodeURIComponent(userId || '');
+      // Try decoding first (handles %40 for @, etc.)
+      const decoded = decodeURIComponent(userId);
+      return decoded;
     } catch {
-      return userId || '';
+      // If decoding fails, use as-is (might already be decoded)
+      return userId;
     }
   }, [userId]);
 
@@ -42,9 +46,15 @@ export default function UserAttendanceDetailPage() {
   const users = Array.isArray(data.Users) ? data.Users : [];
   const breaks = Array.isArray(data.Time_Breaks) ? data.Time_Breaks : [];
 
-  // Get the user being viewed
+  // Get the user being viewed - case-insensitive email matching
   const viewUser = useMemo(() => {
-    return users.find(u => u && u.email === decodedUserId);
+    if (!decodedUserId) return null;
+    const normalizedSearchEmail = decodedUserId.toLowerCase().trim();
+    return users.find(u => {
+      if (!u || !u.email) return false;
+      const normalizedUserEmail = u.email.toLowerCase().trim();
+      return normalizedUserEmail === normalizedSearchEmail;
+    });
   }, [users, decodedUserId]);
 
   // Check permissions

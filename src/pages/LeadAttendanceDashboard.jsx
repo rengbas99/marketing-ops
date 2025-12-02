@@ -136,7 +136,7 @@ export default function LeadAttendanceDashboard() {
   }, [getAttendanceStatus]);
 
   const handleViewDetails = (memberEmail) => {
-    navigate(`/dashboard/attendance/user/${memberEmail}`);
+    navigate(`/dashboard/attendance/user/${encodeURIComponent(memberEmail)}`);
   };
 
   if (loading.all) {
