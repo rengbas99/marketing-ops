@@ -3,6 +3,21 @@
  */
 
 /**
+ * Remove undefined values from an object (Firestore doesn't allow undefined)
+ * @param {Object} obj - Object to clean
+ * @returns {Object} Cleaned object without undefined values
+ */
+function removeUndefinedValues(obj) {
+  const cleaned = { ...obj };
+  Object.keys(cleaned).forEach(key => {
+    if (cleaned[key] === undefined) {
+      delete cleaned[key];
+    }
+  });
+  return cleaned;
+}
+
+/**
  * Check for duplicate clock-in records and return duplicates to remove
  * @param {Array} attendance - Array of attendance records
  * @param {string} userEmail - User email to check
@@ -212,14 +227,23 @@ export async function applyClockOutTimes(attendance, options = {}) {
         continue;
       }
 
-      // Update the record
-      await updateRow(collection, index + 2, {
+      // Update the record - clean object to remove undefined values
+      const updateData = {
         ...record,
         clock_out: clockOutTime.toISOString(),
         status: 'clocked_out',
         hours_worked: hoursWorked.toFixed(2),
-        daily_report: record.daily_report || 'Auto clocked out - clock-out time applied'
-      });
+      };
+      
+      // Only include daily_report if it exists or set default
+      if (record.daily_report) {
+        updateData.daily_report = record.daily_report;
+      } else {
+        updateData.daily_report = 'Auto clocked out - clock-out time applied';
+      }
+      
+      // Remove any undefined values before updating
+      await updateRow(collection, index + 2, removeUndefinedValues(updateData));
 
       results.push({
         record,
@@ -285,13 +309,23 @@ export async function autoClockOutStaleRecords(attendance, updateRow, forceRefre
       const workMinutes = Math.max(0, totalMinutes - breakMinutes);
       const hoursWorked = workMinutes / 60;
 
-      await updateRow(collection, index + 2, {
+      // Build update object, removing undefined values
+      const updateData = {
         ...record,
         clock_out: clockOutTime.toISOString(),
         status: 'clocked_out',
         hours_worked: hoursWorked.toFixed(2),
-        daily_report: record.daily_report || 'Auto clocked out after 15 hours',
-      });
+      };
+      
+      // Only include daily_report if it exists or set default
+      if (record.daily_report) {
+        updateData.daily_report = record.daily_report;
+      } else {
+        updateData.daily_report = 'Auto clocked out after 15 hours';
+      }
+      
+      // Remove any undefined values before updating
+      await updateRow(collection, index + 2, removeUndefinedValues(updateData));
 
       updated++;
     } catch (err) {

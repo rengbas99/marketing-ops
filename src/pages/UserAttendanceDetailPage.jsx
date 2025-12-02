@@ -139,13 +139,28 @@ export default function UserAttendanceDetailPage() {
         calculatedHours = parseFloat(editHours);
       }
 
-      await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
+      // Build update object, ensuring no undefined values
+      const updateData = {
         ...editingAttendance,
         clock_in: clockInTime.toISOString(),
-        clock_out: clockOutTime ? clockOutTime.toISOString() : editingAttendance.clock_out,
         hours_worked: calculatedHours,
         status: clockOutTime ? 'clocked_out' : (editingAttendance.status || 'clocked_in'),
+      };
+      
+      // Only set clock_out if we have a valid value
+      if (clockOutTime) {
+        updateData.clock_out = clockOutTime.toISOString();
+      } else if (editingAttendance.clock_out) {
+        updateData.clock_out = editingAttendance.clock_out;
+      }
+      // Remove any undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
       });
+      
+      await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, updateData);
 
       success('Attendance updated successfully!');
       setEditingAttendance(null);

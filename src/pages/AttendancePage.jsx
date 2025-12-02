@@ -479,12 +479,29 @@ export default function AttendancePage() {
           return;
         }
 
-        await updateRow(COLLECTIONS.ATTENDANCE, index + 2, {
+        // Build update object, ensuring no undefined values
+        const updateData = {
           ...editingAttendance,
-          clock_out: clockOutTime ? clockOutTime.toISOString() : editingAttendance.clock_out,
           status: 'clocked_out',
           hours_worked: hoursWorkedExcludingBreaks.toFixed(2),
+        };
+        
+        // Only set clock_out if we have a valid value
+        if (clockOutTime) {
+          updateData.clock_out = clockOutTime.toISOString();
+        } else if (editingAttendance.clock_out) {
+          updateData.clock_out = editingAttendance.clock_out;
+        }
+        // If neither exists, don't include clock_out (or set to null if field must exist)
+        
+        // Remove any undefined values before updating
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] === undefined) {
+            delete updateData[key];
+          }
         });
+        
+        await updateRow(COLLECTIONS.ATTENDANCE, index + 2, updateData);
 
         await forceRefresh([COLLECTIONS.ATTENDANCE]);
         setEditingAttendance(null);
