@@ -7,7 +7,7 @@ import BreakDialog from '../../components/BreakDialog';
 import BreakTimer from '../../components/BreakTimer';
 import { Clock, Calendar, MessageSquare, FileText, LogIn, LogOut, X, Coffee, Play, Camera, Plane } from 'lucide-react';
 import { COLLECTIONS, ASSET_STATUS } from '../../constants';
-import { shouldAutoClockOut, findStaleClockIns } from '../../utils/attendanceUtils';
+import { shouldAutoClockOut, findStaleClockIns, canClockIn } from '../../utils/attendanceUtils';
 
 export default function ContentCreatorDashboard() {
   const { data, loading, startPolling, stopPolling, addRow, updateRow, forceRefresh } = useData();
@@ -190,6 +190,37 @@ export default function ContentCreatorDashboard() {
     try {
       const clockInTime = new Date().toISOString();
       const today = new Date().toISOString().split('T')[0];
+
+      // Use utility function to check if can clock in (prevents multiple sessions on same day)
+      const clockInCheck = canClockIn(attendance, user?.email, today);
+      
+      if (!clockInCheck.canClockIn && clockInCheck.reason === 'already_clocked_in') {
+        error('You already have an active clock-in session for today. Please clock out first before starting a new session.');
+        setIsClockInLoading(false);
+        return;
+      }
+
+      // If there's a stale record that needs auto clock-out, do it first
+      if (clockInCheck.reason === 'auto_clockout_needed' && clockInCheck.existingRecord) {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === clockInCheck.existingRecord.attendance_id);
+        if (staleIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTimeStale = new Date(clockInCheck.existingRecord.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTimeStale) / (1000 * 60);
+          const breakMinutes = parseFloat(clockInCheck.existingRecord.total_break_duration || 0);
+          const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hoursWorked = workMinutes / 60;
+          
+          await updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+            ...clockInCheck.existingRecord,
+            clock_out: clockOutTime,
+            status: 'clocked_out',
+            hours_worked: hoursWorked.toFixed(2),
+            daily_report: clockInCheck.existingRecord.daily_report || 'Auto clocked out after 15 hours',
+          });
+          await forceRefresh([COLLECTIONS.ATTENDANCE]);
+        }
+      }
 
       const existingAttendance = attendance.find(
         a => a && a.employee_id === user?.email && a.date === today

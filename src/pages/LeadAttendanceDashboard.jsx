@@ -53,30 +53,71 @@ export default function LeadAttendanceDashboard() {
   const getAttendanceStatus = useMemo(() => {
     const statusMap = {};
     
+    // Helper to get date from record (check both date field and clock_in timestamp)
+    const getRecordDate = (record) => {
+      if (record.date) {
+        return new Date(record.date).toISOString().split('T')[0];
+      }
+      if (record.clock_in) {
+        return new Date(record.clock_in).toISOString().split('T')[0];
+      }
+      return null;
+    };
+    
     teamMembers.forEach(member => {
-      const memberAttendance = attendance.find(
-        a => a && a.employee_id === member.email && a.date === selectedDate
-      );
+      // Get ALL attendance records for this member on the selected date
+      const memberAttendanceRecords = attendance.filter(a => {
+        if (!a || !a.employee_id) return false;
+        // Match employee email (trim to handle spaces)
+        if (a.employee_id.trim() !== member.email.trim()) return false;
+        // Check if record is from the selected date
+        const recordDate = getRecordDate(a);
+        return recordDate === selectedDate;
+      });
 
-      if (memberAttendance) {
-        const isClockedIn = memberAttendance.status === 'clocked_in' && !memberAttendance.clock_out;
-        const isClockedOut = memberAttendance.status === 'clocked_out' || (memberAttendance.clock_in && memberAttendance.clock_out);
+      if (memberAttendanceRecords.length > 0) {
+        // Find the most recent active clock-in (if any)
+        const activeClockIn = memberAttendanceRecords.find(a => 
+          a.clock_in && 
+          !a.clock_out && 
+          (a.status === 'clocked_in' || !a.status)
+        );
+        
+        // Find the most recent clocked-out record (for display purposes)
+        const clockedOutRecords = memberAttendanceRecords.filter(a => 
+          a.clock_out || a.status === 'clocked_out'
+        );
+        const mostRecentClockedOut = clockedOutRecords.length > 0 
+          ? clockedOutRecords.sort((a, b) => {
+              const timeA = a.clock_out ? new Date(a.clock_out) : new Date(a.clock_in);
+              const timeB = b.clock_out ? new Date(b.clock_out) : new Date(b.clock_in);
+              return timeB - timeA;
+            })[0]
+          : null;
+
+        // If there's an active clock-in, user is currently working
+        const isClockedIn = !!activeClockIn;
+        // User is "finished" only if they have clocked out AND have NO active clock-in
+        const isClockedOut = !isClockedIn && clockedOutRecords.length > 0;
+        
+        // Use active clock-in for elapsed time, or most recent record
+        const displayAttendance = activeClockIn || mostRecentClockedOut || memberAttendanceRecords[0];
         
         // Calculate elapsed time if clocked in (using currentTime for real-time updates)
         let elapsedTime = null;
-        if (isClockedIn && memberAttendance.clock_in) {
-          const clockInTime = new Date(memberAttendance.clock_in);
+        if (isClockedIn && activeClockIn.clock_in) {
+          const clockInTime = new Date(activeClockIn.clock_in);
           const diff = currentTime - clockInTime;
           const hours = Math.floor(diff / (1000 * 60 * 60));
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
           elapsedTime = { hours, minutes };
         }
 
-        // Calculate total break time
+        // Calculate total break time for the active session
         let totalBreakMinutes = 0;
-        if (memberAttendance.attendance_id) {
+        if (activeClockIn && activeClockIn.attendance_id) {
           const memberBreaks = breaks.filter(
-            b => b && b.attendance_id === memberAttendance.attendance_id && b.break_end
+            b => b && b.attendance_id === activeClockIn.attendance_id && b.break_end
           );
           totalBreakMinutes = memberBreaks.reduce((sum, b) => {
             return sum + (parseFloat(b.duration) || 0);
@@ -85,14 +126,14 @@ export default function LeadAttendanceDashboard() {
 
         statusMap[member.email] = {
           member,
-          attendance: memberAttendance,
+          attendance: displayAttendance,
           isClockedIn,
           isClockedOut,
           elapsedTime,
           totalBreakMinutes,
-          clockIn: memberAttendance.clock_in,
-          clockOut: memberAttendance.clock_out,
-          hoursWorked: memberAttendance.hours_worked
+          clockIn: displayAttendance?.clock_in || null,
+          clockOut: displayAttendance?.clock_out || null,
+          hoursWorked: displayAttendance?.hours_worked || null
         };
       } else {
         statusMap[member.email] = {

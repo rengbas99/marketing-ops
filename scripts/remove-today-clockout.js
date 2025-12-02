@@ -10,7 +10,8 @@ import {
   collection, 
   getDocs,
   updateDoc,
-  doc
+  doc,
+  deleteField
 } from 'firebase/firestore';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -160,10 +161,11 @@ async function removeTodayClockOut() {
           const docRef = doc(db, 'Attendance', record.id);
           
           // Remove clock_out, set status back to clocked_in, clear hours_worked
+          // Use deleteField() to properly remove fields in Firestore
           await updateDoc(docRef, {
-            clock_out: null,
+            clock_out: deleteField(),
             status: 'clocked_in',
-            hours_worked: null,
+            hours_worked: deleteField(),
             // Keep daily_report as is (don't overwrite)
           });
           

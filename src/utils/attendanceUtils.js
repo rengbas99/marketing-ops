@@ -70,7 +70,7 @@ export function shouldAutoClockOut(attendanceRecord) {
 }
 
 /**
- * Check if user can clock in (no active clock-in without clock-out)
+ * Check if user can clock in (no active clock-in without clock-out on the same day)
  * @param {Array} attendance - Array of attendance records
  * @param {string} userEmail - User email to check
  * @param {string} date - Date to check (YYYY-MM-DD format)
@@ -81,14 +81,37 @@ export function canClockIn(attendance, userEmail, date) {
     return { canClockIn: true, reason: '', existingRecord: null };
   }
 
-  // Check for any active clock-in (status is clocked_in and no clock_out)
-  const activeClockIn = attendance.find(a => 
-    a && 
-    a.employee_id === userEmail && 
-    a.date === date &&
-    a.status === 'clocked_in' &&
-    !a.clock_out
-  );
+  // Helper to get date from record (check both date field and clock_in timestamp)
+  const getRecordDate = (record) => {
+    if (record.date) {
+      return new Date(record.date).toISOString().split('T')[0];
+    }
+    if (record.clock_in) {
+      return new Date(record.clock_in).toISOString().split('T')[0];
+    }
+    return null;
+  };
+
+  // Check for ANY active clock-in on the same day (not just matching date field)
+  // This prevents multiple clock-in sessions on the same day
+  const activeClockIn = attendance.find(a => {
+    if (!a || !a.employee_id || !a.clock_in) return false;
+    
+    // Match employee email (trim to handle spaces)
+    if (a.employee_id.trim() !== userEmail.trim()) return false;
+    
+    // Check if record is from the same day
+    const recordDate = getRecordDate(a);
+    if (recordDate !== date) return false;
+    
+    // Check if it's an active clock-in (no clock_out)
+    if (a.clock_out) return false;
+    
+    // Check status - should be clocked_in or missing status
+    if (a.status && a.status !== 'clocked_in') return false;
+    
+    return true;
+  });
 
   if (activeClockIn) {
     // Check if it's been more than 15 hours (should auto clock-out)
