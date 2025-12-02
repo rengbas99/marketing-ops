@@ -560,7 +560,7 @@ export default function ShootsPage() {
               }
             }}
           />
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh] my-4" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh]" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Edit Shoot</h3>
               <button
@@ -944,7 +944,7 @@ export default function ShootsPage() {
             style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
             onClick={() => setShowShootAssignment(false)}
           />
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh] my-4" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh]" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
               <button
