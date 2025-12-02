@@ -191,7 +191,6 @@ export default function ContentCreatorDashboard() {
       const clockInTime = new Date().toISOString();
       const today = new Date().toISOString().split('T')[0];
 
-<<<<<<< HEAD
       // Use utility function to check if can clock in (prevents multiple sessions on same day)
       const clockInCheck = canClockIn(attendance, user?.email, today);
       
