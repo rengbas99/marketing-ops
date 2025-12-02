@@ -98,11 +98,9 @@ export default function LeadAttendanceDashboard() {
       if (memberAttendanceRecords.length > 0) {
         // Find the most recent active clock-in (if any)
         // Check for records with clock_in but no clock_out, regardless of status
-        // Status might be 'clocked_in', undefined, null, or missing
+        // Status might be 'clocked_in', undefined, null, or missing (all mean active)
         const activeClockIn = memberAttendanceRecords.find(a => {
           if (!a || !a.clock_in) return false;
-          // Must have clock_in
-          if (!a.clock_in) return false;
           // Must NOT have clock_out
           if (a.clock_out) return false;
           // Status should be 'clocked_in' or undefined/null/missing (all mean active)
