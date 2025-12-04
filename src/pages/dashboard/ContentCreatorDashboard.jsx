@@ -55,8 +55,9 @@ export default function ContentCreatorDashboard() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
+    const normalizedEmail = (user?.email || '').trim();
     const todayAtt = attendance.find(
-      a => a && a.employee_id === user?.email && a.date === today
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
     );
 
     // Check if today's attendance should be auto clocked out (over 15 hours)
@@ -87,8 +88,9 @@ export default function ContentCreatorDashboard() {
     }
 
     // Auto clock-out all stale records (not just today's)
+    const normalizedEmail = (user?.email || '').trim();
     const staleRecords = findStaleClockIns(attendance.filter(
-      a => a && a.employee_id === user?.email
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail
     ));
     
     if (staleRecords.length > 0) {
@@ -118,7 +120,8 @@ export default function ContentCreatorDashboard() {
     }
 
     setTodayAttendance(todayAtt);
-    setClockedIn(todayAtt && todayAtt.status === 'clocked_in' && !todayAtt.clock_out);
+    setClockedIn(todayAtt && todayAtt.clock_in && !todayAtt.clock_out && 
+      (todayAtt.status === 'clocked_in' || !todayAtt.status || todayAtt.status === ''));
   }, [data, user, attendance, updateRow, forceRefresh]);
 
   useEffect(() => {
@@ -222,8 +225,9 @@ export default function ContentCreatorDashboard() {
         }
       }
 
+      const normalizedEmail = (user?.email || '').trim();
       const existingAttendance = attendance.find(
-        a => a && a.employee_id === user?.email && a.date === today
+        a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
       );
 
       if (existingAttendance) {

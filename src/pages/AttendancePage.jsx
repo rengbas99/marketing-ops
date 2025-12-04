@@ -140,8 +140,9 @@ export default function AttendancePage() {
       forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
     }
 
+    const normalizedEmail = (user?.email || '').trim();
     const todayAtt = attendance.find(
-      a => a && a.employee_id === user?.email && a.date === today
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
     );
     
     // Check if the found attendance should be auto clocked out
@@ -250,8 +251,9 @@ export default function AttendancePage() {
         }
       }
 
+      const normalizedEmail = (user?.email || '').trim();
       const existingAttendance = attendance.find(
-        a => a && a.employee_id === user?.email && a.date === today
+        a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
       );
 
       if (existingAttendance) {
@@ -676,9 +678,10 @@ export default function AttendancePage() {
     monthEnd.setMonth(monthEnd.getMonth() + 1);
     monthEnd.setDate(0);
 
+    const normalizedEmail = (employeeEmail || '').trim();
     const dailyHours = attendance
       .filter(a => {
-        if (!a || a.employee_id !== employeeEmail || a.status !== 'clocked_out') return false;
+        if (!a || !a.employee_id || a.employee_id.trim() !== normalizedEmail || a.status !== 'clocked_out') return false;
         const date = getRecordDate(a);
         return date && date >= monthStart && date <= monthEnd;
       })
@@ -1094,8 +1097,9 @@ export default function AttendancePage() {
       <div className="space-y-6">
         {usersToDisplay.map((displayUser, userIndex) => {
           const monthlyHours = calculateMonthlyHours(displayUser.email, selectedMonth);
+          const normalizedUserEmail = (displayUser.email || '').trim();
           const userAttendance = attendance.filter(
-            a => a && a.employee_id === displayUser.email
+            a => a && a.employee_id && a.employee_id.trim() === normalizedUserEmail
           );
 
           const monthStart = new Date(selectedMonth + '-01');

@@ -48,11 +48,13 @@ export default function PhotographerDashboard() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
+    const normalizedEmail = (user?.email || '').trim();
     const todayAtt = attendance.find(
-      a => a && a.employee_id === user?.email && a.date === today
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
     );
     setTodayAttendance(todayAtt);
-    setClockedIn(todayAtt && todayAtt.status === 'clocked_in');
+    setClockedIn(todayAtt && todayAtt.clock_in && !todayAtt.clock_out && 
+      (todayAtt.status === 'clocked_in' || !todayAtt.status || todayAtt.status === ''));
   }, [data, user, attendance]);
 
   useEffect(() => {
@@ -184,8 +186,9 @@ export default function PhotographerDashboard() {
         }
       }
 
+      const normalizedEmail = (user?.email || '').trim();
       const existingAttendance = attendance.find(
-        a => a && a.employee_id === user?.email && a.date === today
+        a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
       );
 
       if (existingAttendance) {

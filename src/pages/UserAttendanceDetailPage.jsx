@@ -60,9 +60,13 @@ export default function UserAttendanceDetailPage() {
   // Check permissions
   const canEdit = user?.role === ROLES.MANAGER || user?.role === ROLES.LEAD;
 
-  // Get user's attendance records
+  // Get user's attendance records - use trimming for consistent matching
   const userAttendance = useMemo(() => {
-    return attendance.filter(a => a && a.employee_id === decodedUserId);
+    const normalizedUserId = (decodedUserId || '').trim();
+    return attendance.filter(a => {
+      if (!a || !a.employee_id) return false;
+      return a.employee_id.trim() === normalizedUserId;
+    });
   }, [attendance, decodedUserId]);
 
   // Filter by selected month
