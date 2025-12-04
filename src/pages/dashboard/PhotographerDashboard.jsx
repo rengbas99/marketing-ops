@@ -213,9 +213,10 @@ export default function PhotographerDashboard() {
           setClockedIn(true);
         }
       } else {
+        const normalizedEmail = (user.email || '').trim();
         await addRow(COLLECTIONS.ATTENDANCE, {
           attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
+          employee_id: normalizedEmail,
           date: today,
           clock_in: clockInTime,
           status: 'clocked_in',
@@ -224,7 +225,7 @@ export default function PhotographerDashboard() {
 
         const newAttendance = {
           attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
+          employee_id: normalizedEmail,
           date: today,
           clock_in: clockInTime,
           status: 'clocked_in',

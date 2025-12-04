@@ -116,10 +116,11 @@ export default function ShootsPage() {
     try {
       const gps = { lat: null, lng: null };
 
+      const normalizedEmail = (user.email || '').trim();
       const attendanceData = {
         attendance_id: `ATT-${Date.now()}`,
         shoot_id: shootData.shoot_id,
-        photographer_email: user.email,
+        photographer_email: normalizedEmail,
         start_time: new Date().toISOString(),
         clock_in: new Date().toISOString(),
         status: 'In Progress',

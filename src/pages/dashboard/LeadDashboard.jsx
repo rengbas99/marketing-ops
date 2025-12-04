@@ -263,9 +263,10 @@ export default function LeadDashboard() {
           success('Clocked in successfully!');
         }
       } else {
+        const normalizedEmail = (user.email || '').trim();
         const newAttendance = {
           attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
+          employee_id: normalizedEmail,
           date: todayDate,
           clock_in: clockInTime,
           status: 'clocked_in',
