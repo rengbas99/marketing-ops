@@ -122,7 +122,6 @@ export default function LeadDashboard() {
     }
 
     // Auto clock-out all stale records (not just today's)
-    const normalizedEmail = (user?.email || '').trim();
     const staleRecords = findStaleClockIns(attendance.filter(
       a => a && a.employee_id && a.employee_id.trim() === normalizedEmail
     ));
