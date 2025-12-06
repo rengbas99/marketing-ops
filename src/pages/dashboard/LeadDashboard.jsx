@@ -536,16 +536,27 @@ export default function LeadDashboard() {
     u.role !== ROLES.LEAD
   );
 
+  // Check ALL records for each member and find if ANY are active
+  // This handles cases where users have multiple sessions on the same day
   const activeAttendanceCount = teamMembers.filter(member => {
-    const memberAttendance = attendance.find(
-      a => a && a.employee_id === member.email && a.date === today
+    // Get ALL attendance records for this member today
+    const memberAttendanceRecords = attendance.filter(
+      a => a && 
+           a.employee_id && 
+           a.employee_id.trim() === member.email.trim() && 
+           a.date === today
     );
     
-    if (!memberAttendance) return false;
+    if (memberAttendanceRecords.length === 0) return false;
     
-    // Exact same check as attendance page
-    const isClockedIn = memberAttendance.status === 'clocked_in' && !memberAttendance.clock_out;
-    return isClockedIn;
+    // Check if ANY record is active (clocked in without clock out)
+    const hasActiveClockIn = memberAttendanceRecords.some(a => {
+      return a.clock_in && 
+             !a.clock_out && 
+             (a.status === 'clocked_in' || !a.status || a.status === '');
+    });
+    
+    return hasActiveClockIn;
   }).length;
 
   if (loading.all) {

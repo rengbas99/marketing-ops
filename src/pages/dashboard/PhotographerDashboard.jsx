@@ -186,57 +186,47 @@ export default function PhotographerDashboard() {
         }
       }
 
+      // Check if there's an ACTIVE clock-in (not just any record)
+      // This prevents overwriting previous clock-in/clock-out data
       const normalizedEmail = (user?.email || '').trim();
-      const existingAttendance = attendance.find(
-        a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
+      const activeClockIn = attendance.find(
+        a => a && 
+             a.employee_id && 
+             a.employee_id.trim() === normalizedEmail && 
+             a.date === today &&
+             a.clock_in &&
+             !a.clock_out &&
+             (a.status === 'clocked_in' || !a.status || a.status === '')
       );
 
-      if (existingAttendance) {
-        const attIndex = attendance.findIndex(
-          a => a && a.attendance_id === existingAttendance.attendance_id
-        );
-
-        if (attIndex !== -1) {
-          await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
-            ...existingAttendance,
-            clock_in: clockInTime,
-            clock_out: null,
-            status: 'clocked_in',
-            hours_worked: null,
-          });
-
-          const updatedAttendance = {
-            ...existingAttendance,
-            clock_in: clockInTime,
-            clock_out: null,
-            status: 'clocked_in',
-            hours_worked: null,
-          };
-          setTodayAttendance(updatedAttendance);
-          setClockedIn(true);
-        }
-      } else {
-        const normalizedEmail = (user.email || '').trim();
-        await addRow(COLLECTIONS.ATTENDANCE, {
-          attendance_id: `ATT-${Date.now()}`,
-          employee_id: normalizedEmail,
-          date: today,
-          clock_in: clockInTime,
-          status: 'clocked_in',
-          created_at: clockInTime,
-        });
-
-        const newAttendance = {
-          attendance_id: `ATT-${Date.now()}`,
-          employee_id: normalizedEmail,
-          date: today,
-          clock_in: clockInTime,
-          status: 'clocked_in',
-          created_at: clockInTime,
-        };
-        setTodayAttendance(newAttendance);
-        setClockedIn(true);
+      if (activeClockIn) {
+        error('You already have an active clock-in session for today. Please clock out first before starting a new session.');
+        setIsClockInLoading(false);
+        return;
       }
+
+      // Always create a NEW record for a new clock-in session (don't overwrite existing records)
+      // This preserves previous clock-in/clock-out data for the same day
+      const normalizedEmailForNew = (user.email || '').trim();
+      await addRow(COLLECTIONS.ATTENDANCE, {
+        attendance_id: `ATT-${Date.now()}`,
+        employee_id: normalizedEmailForNew,
+        date: today,
+        clock_in: clockInTime,
+        status: 'clocked_in',
+        created_at: clockInTime,
+      });
+
+      const newAttendance = {
+        attendance_id: `ATT-${Date.now()}`,
+        employee_id: normalizedEmailForNew,
+        date: today,
+        clock_in: clockInTime,
+        status: 'clocked_in',
+        created_at: clockInTime,
+      };
+      setTodayAttendance(newAttendance);
+      setClockedIn(true);
 
       const shootId = selectedShoot || 'GENERAL';
 
