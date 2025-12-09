@@ -935,25 +935,6 @@ export default function AttendancePage() {
                   <FileText className="w-4 h-4" />
                   Daily Reports
                 </button>
-                {/* Utility buttons for managers/leads */}
-                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
-                  <button
-                    onClick={() => handleApplyClockOutTimes('Alan@reformmedia.co.uk', '2024-12')}
-                    disabled={isApplyingClockOut}
-                    className="px-3 py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Apply clock-out times for Alan's December records"
-                  >
-                    {isApplyingClockOut ? 'Applying...' : 'Fix Alan Dec'}
-                  </button>
-                  <button
-                    onClick={handleAutoClockOutStale}
-                    disabled={isApplyingClockOut}
-                    className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Auto clock-out all records over 15 hours"
-                  >
-                    {isApplyingClockOut ? 'Processing...' : 'Auto Clock-Out Stale'}
-                  </button>
-                </div>
               </>
             )}
           </div>
