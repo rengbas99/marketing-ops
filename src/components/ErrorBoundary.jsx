@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import Card from './primitives/Card.jsx';
 
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -19,7 +20,7 @@ export class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-          <div className="glass-card p-8 max-w-md w-full text-center border-red-100 shadow-xl">
+          <Card glass className="max-w-md w-full text-center border-red-100 shadow-xl">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertTriangle className="w-8 h-8 text-red-600" />
             </div>
@@ -34,7 +35,7 @@ export class ErrorBoundary extends Component {
               <RefreshCw className="w-5 h-5" />
               Reload Page
             </button>
-          </div>
+          </Card>
         </div>
       );
     }

@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LeadAttendanceDashboard from './LeadAttendanceDashboard';
+import ModalPortal from '../components/primitives/ModalPortal.jsx';
+import Card from '../components/primitives/Card.jsx';
 import { Clock, Calendar, TrendingUp, User, LogIn, LogOut, Edit2, X, ChevronLeft, ChevronRight, BarChart3, CheckCircle, FileText, Eye, ArrowRight } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES } from '../constants';
@@ -699,7 +701,7 @@ export default function AttendancePage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Attendance</h1>
           <p className="text-gray-600">
@@ -731,13 +733,13 @@ export default function AttendancePage() {
             ) : (
               // Team view: Show all toggle buttons
               <>
-                <div className="glass-panel p-1 flex gap-1">
+                <Card glass className="p-1 flex gap-1">
                   <button
                     onClick={() => {
                       setViewMode('daily-status');
                       navigate('/dashboard/attendance?view=daily-status');
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'daily-status'
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'daily-status'
                         ? 'bg-primary text-white shadow-md'
                         : 'text-gray-500 hover:bg-gray-100'
                       }`}
@@ -749,7 +751,7 @@ export default function AttendancePage() {
                       setViewMode('personal');
                       navigate('/dashboard/attendance?view=personal');
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'personal'
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'personal'
                         ? 'bg-primary text-white shadow-md'
                         : 'text-gray-500 hover:bg-gray-100'
                       }`}
@@ -761,14 +763,14 @@ export default function AttendancePage() {
                       setViewMode('team');
                       navigate('/dashboard/attendance?view=team');
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'team'
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'team'
                         ? 'bg-primary text-white shadow-md'
                         : 'text-gray-500 hover:bg-gray-100'
                       }`}
                   >
                     Team History
                   </button>
-                </div>
+                </Card>
                 <button
                   onClick={() => navigate('/dashboard/daily-reports')}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
@@ -780,11 +782,11 @@ export default function AttendancePage() {
             )}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Clock In/Out Card */}
       {viewMode === 'personal' && (
-        <div className={`glass-card p-6 relative overflow-hidden ${clockedIn
+        <Card glass className={`p-6 relative overflow-hidden ${clockedIn
             ? 'border-green-200'
             : 'border-primary/20'
           }`}>
@@ -862,11 +864,11 @@ export default function AttendancePage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Month Selector */}
-      <div className="glass-card p-4">
+      <Card glass className="p-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200 w-full md:w-auto">
@@ -876,7 +878,7 @@ export default function AttendancePage() {
                   current.setMonth(current.getMonth() - 1);
                   setSelectedMonth(current.toISOString().slice(0, 7));
                 }}
-                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500"
+                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-[transform,opacity,colors,shadow] text-gray-500"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -896,7 +898,7 @@ export default function AttendancePage() {
                   }
                 }}
                 disabled={selectedMonth >= new Date().toISOString().slice(0, 7)}
-                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 disabled:opacity-30"
+                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-[transform,opacity,colors,shadow] text-gray-500 disabled:opacity-30"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -915,7 +917,7 @@ export default function AttendancePage() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Attendance Summary */}
       <div className="space-y-6">
@@ -942,9 +944,10 @@ export default function AttendancePage() {
           });
 
           return (
-            <div
+            <Card
               key={displayUser.email || userIndex}
-              className="glass-card p-6 animate-fadeIn"
+              glass
+              className="p-6 animate-fadeIn"
               style={{ animationDelay: `${userIndex * 0.1}s` }}
             >
               {/* User Header */}
@@ -1154,7 +1157,7 @@ export default function AttendancePage() {
                         type="datetime-local"
                         value={editClockOut}
                         onChange={(e) => setEditClockOut(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                       />
                       <p className="text-xs text-gray-400 mt-1">Leave empty to keep current clock-out.</p>
                     </div>
@@ -1167,7 +1170,7 @@ export default function AttendancePage() {
                         value={editHours}
                         onChange={(e) => setEditHours(e.target.value)}
                         placeholder="e.g., 7.5"
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                       />
                       <p className="text-xs text-gray-400 mt-1">Optional. Overrides auto-calculated hours.</p>
                     </div>
@@ -1203,228 +1206,184 @@ export default function AttendancePage() {
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           );
         })}
       </div>
 
-      {/* Clock Out Report Modal */}
-      {showClockOutReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 transition-opacity z-[100]" 
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
-            onClick={(e) => {
-              // Only close if clicking the backdrop, not the modal content
-              if (e.target === e.currentTarget) {
-                setShowClockOutReport(false);
-                setClockOutReport('');
-              }
-            }} 
-          />
-          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              (Optional) Provide a brief summary of what you accomplished today before clocking out.
-            </p>
-            <textarea
-              value={clockOutReport}
-              onChange={(e) => setClockOutReport(e.target.value)}
-              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
-              rows="5"
-              autoFocus
-              disabled={isClockOutLoading}
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleClockOut(clockOutReport)}
-                disabled={isClockOutLoading}
-                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isClockOutLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="w-5 h-5" />
-                    Clock Out
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                disabled={isClockOutLoading}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+      <ModalPortal
+        id="attendance-clockout-report"
+        isOpen={showClockOutReport}
+        onClose={() => {
+          setShowClockOutReport(false);
+          setClockOutReport('');
+        }}
+        title="Daily Work Report"
+        description="(Optional) Provide a brief summary before clocking out."
+        size="md"
+      >
+        <textarea
+          value={clockOutReport}
+          onChange={(e) => setClockOutReport(e.target.value)}
+          placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions..."
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow] resize-none mb-4"
+          rows="5"
+          disabled={isClockOutLoading}
+        />
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleClockOut(clockOutReport)}
+            disabled={isClockOutLoading}
+            className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isClockOutLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <LogOut className="w-5 h-5" />
+                Clock Out
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setShowClockOutReport(false);
+              setClockOutReport('');
+            }}
+            disabled={isClockOutLoading}
+            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
         </div>
-      )}
+      </ModalPortal>
 
-      {/* Daily Reports View Modal */}
-      {showReportsView && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={() => setShowReportsView(false)} />
-          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="sticky top-0 bg-white border-b border-gray-100 pb-4 mb-6 -mx-6 px-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Daily Work Reports</h2>
-                  <p className="text-sm text-gray-600 mt-1">View all team member daily reports</p>
-                </div>
-                <button
-                  onClick={() => setShowReportsView(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+      <ModalPortal
+        id="attendance-daily-reports"
+        isOpen={showReportsView}
+        onClose={() => setShowReportsView(false)}
+        title="Daily Work Reports"
+        description="View all team member daily reports"
+        size="full"
+      >
+        <div className="max-h-[calc(var(--vh)*100-200px)] overflow-y-auto space-y-4 pr-1">
+          {attendance
+            .filter(a => a && a.daily_report && a.status === 'clocked_out')
+            .sort((a, b) => {
+              const dateA = getRecordDate(a);
+              const dateB = getRecordDate(b);
+              return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+            })
+            .map((record, idx) => {
+              const recordUser = users.find(u => u && u.email === record.employee_id);
+              const recordDate = getRecordDate(record);
+              return (
+                <div
+                  key={record.attendance_id || idx}
+                  className="p-5 bg-gray-50 border border-gray-200 rounded-xl hover:shadow-md transition-[transform,opacity,colors,shadow] cursor-pointer"
+                  onClick={() => setSelectedReport({ ...record, user: recordUser })}
                 >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {attendance
-                .filter(a => a && a.daily_report && a.status === 'clocked_out')
-                .sort((a, b) => {
-                  const dateA = getRecordDate(a);
-                  const dateB = getRecordDate(b);
-                  return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
-                })
-                .map((record, idx) => {
-                  const recordUser = users.find(u => u && u.email === record.employee_id);
-                  const recordDate = getRecordDate(record);
-                  return (
-                    <div
-                      key={record.attendance_id || idx}
-                      className="p-5 bg-gray-50 border border-gray-200 rounded-xl hover:shadow-md transition-all cursor-pointer"
-                      onClick={() => setSelectedReport({ ...record, user: recordUser })}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                            {recordUser?.name?.charAt(0) || record.employee_id?.charAt(0) || 'U'}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900">{recordUser?.name || record.employee_id}</h3>
-                            <p className="text-sm text-gray-600">
-                              {recordDate ? recordDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown date'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-gray-900">{record.hours_worked ? `${record.hours_worked}h` : '—'}</p>
-                          <p className="text-xs text-gray-500">
-                            {record.clock_in && record.clock_out && (
-                              <>
-                                {new Date(record.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(record.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </>
-                            )}
-                          </p>
-                        </div>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                        {recordUser?.name?.charAt(0) || record.employee_id?.charAt(0) || 'U'}
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-gray-100">
-                        <p className="text-sm text-gray-700 line-clamp-3">{record.daily_report}</p>
-                      </div>
-                      <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Click to view full report</span>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{recordUser?.name || record.employee_id}</h3>
+                        <p className="text-sm text-gray-600">
+                          {recordDate ? recordDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown date'}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-
-              {attendance.filter(a => a && a.daily_report && a.status === 'clocked_out').length === 0 && (
-                <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">No daily reports available</p>
-                  <p className="text-xs mt-1">Reports will appear here when team members clock out with a report</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Individual Report Detail Modal */}
-      {selectedReport && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity z-[100]" onClick={() => setSelectedReport(null)} />
-          <div className="w-full max-w-2xl relative z-[101] animate-fadeIn bg-white rounded-3xl shadow-2xl border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-lg">
-                  {selectedReport.user?.name?.charAt(0) || selectedReport.employee_id?.charAt(0) || 'U'}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">{selectedReport.user?.name || selectedReport.employee_id}</h3>
-                  <p className="text-sm text-gray-600">
-                    {getRecordDate(selectedReport)?.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) || 'Unknown date'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedReport(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Attendance Details */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Clock In</div>
-                  <div className="font-bold text-gray-900">
-                    {selectedReport.clock_in ? new Date(selectedReport.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-gray-900">{record.hours_worked ? `${record.hours_worked}h` : '—'}</p>
+                      <p className="text-xs text-gray-500">
+                        {record.clock_in && record.clock_out && (
+                          <>
+                            {new Date(record.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(record.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-gray-100">
+                    <p className="text-sm text-gray-700 line-clamp-3">{record.daily_report}</p>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Click to view full report</span>
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Clock Out</div>
-                  <div className="font-bold text-gray-900">
-                    {selectedReport.clock_out ? new Date(selectedReport.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
-                  </div>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Hours Worked</div>
-                  <div className="font-bold text-gray-900">{selectedReport.hours_worked ? `${selectedReport.hours_worked}h` : '—'}</div>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Break Time</div>
-                  <div className="font-bold text-gray-900">{formatBreakDuration(selectedReport.total_break_duration || 0)}</div>
-                </div>
-              </div>
+              );
+            })}
 
-              {/* Daily Report */}
-              <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <h4 className="text-lg font-bold text-gray-900">Daily Work Report</h4>
-                </div>
-                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedReport.daily_report}</p>
+          {attendance.filter(a => a && a.daily_report && a.status === 'clocked_out').length === 0 && (
+            <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p className="text-sm">No daily reports available</p>
+              <p className="text-xs mt-1">Reports will appear here when team members clock out with a report</p>
+            </div>
+          )}
+        </div>
+      </ModalPortal>
+
+      <ModalPortal
+        id="attendance-report-detail"
+        isOpen={Boolean(selectedReport)}
+        onClose={() => setSelectedReport(null)}
+        title={selectedReport?.user?.name || selectedReport?.employee_id || 'Daily Report'}
+        description={selectedReport ? getRecordDate(selectedReport)?.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : undefined}
+        size="lg"
+      >
+        {selectedReport ? (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-lg">
+                {selectedReport.user?.name?.charAt(0) || selectedReport.employee_id?.charAt(0) || 'U'}
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">
+                  {getRecordDate(selectedReport)?.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) || 'Unknown date'}
+                </p>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Clock In</div>
+                <div className="font-bold text-gray-900">
+                  {selectedReport.clock_in ? new Date(selectedReport.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Clock Out</div>
+                <div className="font-bold text-gray-900">
+                  {selectedReport.clock_out ? new Date(selectedReport.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Hours Worked</div>
+                <div className="font-bold text-gray-900">{selectedReport.hours_worked ? `${selectedReport.hours_worked}h` : '—'}</div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Break Time</div>
+                <div className="font-bold text-gray-900">{formatBreakDuration(selectedReport.total_break_duration || 0)}</div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h4 className="text-lg font-bold text-gray-900">Daily Work Report</h4>
+              </div>
+              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedReport.daily_report}</p>
+            </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </ModalPortal>
     </div>
   );
 }

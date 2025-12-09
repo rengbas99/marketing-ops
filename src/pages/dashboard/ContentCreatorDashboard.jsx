@@ -5,9 +5,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/Toast';
 import BreakDialog from '../../components/BreakDialog';
 import BreakTimer from '../../components/BreakTimer';
-import { Clock, Calendar, MessageSquare, FileText, LogIn, LogOut, X, Coffee, Play, Camera, Plane } from 'lucide-react';
+import { Clock, Calendar, MessageSquare, FileText, LogIn, LogOut, Coffee, Play, Camera, Plane } from 'lucide-react';
 import { COLLECTIONS, ASSET_STATUS } from '../../constants';
 import { canClockIn } from '../../utils/attendanceUtils';
+import Card from '../../components/primitives/Card.jsx';
+import ModalPortal from '../../components/primitives/ModalPortal.jsx';
+import Button from '../../components/primitives/Button.jsx';
 
 export default function ContentCreatorDashboard() {
   const { data, loading, startPolling, stopPolling, addRow, updateRow, forceRefresh } = useData();
@@ -25,6 +28,20 @@ export default function ContentCreatorDashboard() {
   const [showBreakDialog, setShowBreakDialog] = useState(false);
   const [showClockOutReport, setShowClockOutReport] = useState(false);
   const [clockOutReport, setClockOutReport] = useState('');
+  const [showAssignTaskModal, setShowAssignTaskModal] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    client_id: '',
+    shoot_id: '',
+    assigned_to: '',
+    assigned_role: '',
+    task_type: 'editing',
+    deadline: '',
+    fileLink: '',
+    status: ASSET_STATUS.TO_EDIT,
+    channel: '',
+    publish_date: '',
+  });
 
   useEffect(() => {
     startPolling('content-creator-dashboard', [
@@ -35,7 +52,8 @@ export default function ContentCreatorDashboard() {
       COLLECTIONS.CLIENTS,
       COLLECTIONS.SHOOTS,
       COLLECTIONS.EDITOR_TIME_LOGS,
-      COLLECTIONS.TIME_BREAKS
+      COLLECTIONS.TIME_BREAKS,
+      COLLECTIONS.USERS
     ]);
     return () => stopPolling('content-creator-dashboard');
   }, [startPolling, stopPolling]);
@@ -47,6 +65,7 @@ export default function ContentCreatorDashboard() {
   const shoots = Array.isArray(data.Shoots) ? data.Shoots : [];
   const breaks = Array.isArray(data.Time_Breaks) ? data.Time_Breaks : [];
   const timeLogs = Array.isArray(data.Editor_Time_Logs) ? data.Editor_Time_Logs : [];
+  const users = Array.isArray(data.Users) ? data.Users : [];
 
   const assignedTasks = Array.isArray(assets) ? assets.filter(
     a => a && (a.assigned_creator_email === user?.email) &&
@@ -505,6 +524,119 @@ export default function ContentCreatorDashboard() {
     .sort((a, b) => new Date(a.publish_date || 0) - new Date(b.publish_date || 0))
     .slice(0, 5) : [];
 
+  const allAvailableUsers = (Array.isArray(users) ? users : []).filter(
+    u => {
+      if (!u || !u.email) return false;
+      if (u.active === 'FALSE' || u.active === false) return false;
+      if (u.role === ROLES.MANAGER) return false;
+      if (u.role === ROLES.PHOTOGRAPHER) return false;
+      return u.role === ROLES.EDITOR || u.role === ROLES.CONTENT_CREATOR || u.role === ROLES.LEAD;
+    }
+  );
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!newTask.title || !newTask.assigned_to || !newTask.deadline) {
+      error('Please fill in all required fields (Title, Assign To, and Deadline)');
+      return;
+    }
+
+    try {
+      const existingTask = assets.find(a => {
+        if (!a || !a.title) return false;
+        const titleMatch = a.title === newTask.title;
+        const assigneeMatch =
+          (newTask.assigned_role === ROLES.EDITOR && a.assigned_editor_email === newTask.assigned_to) ||
+          (newTask.assigned_role === ROLES.CONTENT_CREATOR && a.assigned_creator_email === newTask.assigned_to) ||
+          (newTask.assigned_role === ROLES.PHOTOGRAPHER && a.assigned_photographer_email === newTask.assigned_to);
+        const deadlineMatch = a.deadline === newTask.deadline;
+        const notCompleted = a.status !== ASSET_STATUS.COMPLETED && a.status !== 'Final';
+        return titleMatch && assigneeMatch && deadlineMatch && notCompleted;
+      });
+
+      if (existingTask) {
+        error('A task with the same title, assignee, and deadline already exists');
+        return;
+      }
+
+      const assignedUser = users.find(u => u && u.email === newTask.assigned_to);
+      const taskData = {
+        asset_id: `AST-${Date.now()}`,
+        title: newTask.title,
+        shoot_id: newTask.shoot_id || '',
+        deadline: newTask.deadline,
+        status: newTask.status,
+        upload_folder_link: newTask.fileLink,
+        work_progress: 0,
+        created_at: new Date().toISOString(),
+      };
+
+      if (newTask.assigned_role === ROLES.LEAD) {
+        if (newTask.task_type === 'photography') {
+          taskData.assigned_photographer_email = newTask.assigned_to;
+          taskData.task_type = 'photography';
+        } else if (newTask.task_type === 'posting' || newTask.task_type === 'content_creation') {
+          taskData.assigned_creator_email = newTask.assigned_to;
+          taskData.task_type = newTask.task_type;
+          if (newTask.task_type === 'posting') {
+            taskData.channel = newTask.channel;
+            taskData.publish_date = newTask.publish_date;
+          }
+        } else {
+          taskData.assigned_editor_email = newTask.assigned_to;
+          taskData.task_type = 'editing';
+        }
+      } else if (newTask.assigned_role === ROLES.PHOTOGRAPHER) {
+        taskData.assigned_photographer_email = newTask.assigned_to;
+        taskData.task_type = 'photography';
+      } else if (newTask.assigned_role === ROLES.CONTENT_CREATOR) {
+        taskData.assigned_creator_email = newTask.assigned_to;
+        taskData.task_type = newTask.task_type || 'content_creation';
+        if (newTask.task_type === 'posting') {
+          taskData.channel = newTask.channel;
+          taskData.publish_date = newTask.publish_date;
+        }
+      } else {
+        taskData.assigned_editor_email = newTask.assigned_to;
+        taskData.task_type = 'editing';
+      }
+
+      await addRow(COLLECTIONS.ASSETS, taskData);
+
+      if (newTask.task_type === 'posting' && newTask.publish_date && newTask.channel) {
+        await addRow(COLLECTIONS.CONTENT_CALENDAR, {
+          calendar_id: `CAL-${Date.now()}`,
+          asset_id: taskData.asset_id,
+          publish_date: newTask.publish_date,
+          publish_time: '',
+          channel: newTask.channel,
+          status: 'scheduled',
+          notes: `Posting task: ${newTask.title}`,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      await forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.CONTENT_CALENDAR]);
+      success(`Task created and assigned to ${assignedUser?.name || newTask.assigned_to}`);
+      setShowAssignTaskModal(false);
+      setNewTask({
+        title: '',
+        client_id: '',
+        shoot_id: '',
+        assigned_to: '',
+        assigned_role: '',
+        task_type: 'editing',
+        deadline: '',
+        fileLink: '',
+        status: ASSET_STATUS.TO_EDIT,
+        channel: '',
+        publish_date: '',
+      });
+    } catch (err) {
+      error('Error creating task: ' + err.message);
+    }
+  };
+
   if (loading.all) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -526,15 +658,15 @@ export default function ContentCreatorDashboard() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
           Welcome back, <span className="text-gradient">{user?.name || 'Content Creator'}</span>!
         </h1>
         <p className="text-gray-600">Track attendance and view calendar</p>
-      </div>
+      </Card>
 
       {/* Clock In/Out Card */}
-      <div className={`glass-card p-6 transition-all duration-300 ${clockedIn ? 'border-green-500/50 bg-green-50/50' : ''
+      <Card glass className={`p-6 transition-[transform,opacity,colors,shadow] duration-300 ${clockedIn ? 'border-green-500/50 bg-green-50/50' : ''
         }`}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -586,13 +718,14 @@ export default function ContentCreatorDashboard() {
 
             <div className="flex gap-3">
               {!activeBreak && (
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => setShowBreakDialog(true)}
-                  className="flex-1 glass-button text-gray-700 hover:text-primary flex items-center justify-center gap-2"
+                  icon={Coffee}
+                  className="flex-1"
                 >
-                  <Coffee className="w-4 h-4" />
                   Take Break
-                </button>
+                </Button>
               )}
               <button
                 onClick={handleClockOutClick}
@@ -614,94 +747,89 @@ export default function ContentCreatorDashboard() {
             <button
               onClick={handleClockIn}
               disabled={isClockInLoading}
-              className="w-full bg-primary text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all transform hover:scale-[1.02] flex items-center justify-center gap-3"
+              className="w-full bg-primary text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:bg-primary-dark transition-[transform,opacity,colors,shadow] transform hover:scale-[1.02] flex items-center justify-center gap-3"
             >
               <LogIn className="w-6 h-6" />
               {assignedTasks.length > 0 ? 'Clock In & Select Task' : 'Clock In'}
             </button>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Task Selector Modal */}
-      {showTaskSelector && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={() => {
-              setShowTaskSelector(false);
-              setSelectedTask('');
-            }}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Select Task</h3>
-              <button
-                onClick={() => {
-                  setShowTaskSelector(false);
-                  setSelectedTask('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Task (Optional)
-              </label>
-              <select
-                value={selectedTask}
-                onChange={(e) => setSelectedTask(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              >
-                <option value="">No task - Just clock in</option>
-                {assignedTasks
-                  .filter(t => t && (t.status === ASSET_STATUS.TO_EDIT || !t.status || t.status === ASSET_STATUS.IN_PROGRESS))
-                  .map(task => {
-                    const shoot = shoots.find(s => s && s.shoot_id === task.shoot_id);
-                    const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
-                    return (
-                      <option key={task.asset_id} value={task.asset_id}>
-                        {task.title} {client ? `- ${client.company_name}` : ''}
-                      </option>
-                    );
-                  })}
-              </select>
-              <p className="text-xs text-gray-500 mt-2">
-                You can clock in without selecting a task, or select one to track time on it
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowTaskSelector(false);
-                  setSelectedTask('');
-                }}
-                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={performClockIn}
-                disabled={isClockInLoading}
-                className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isClockInLoading ? 'Processing...' : 'Clock In'}
-              </button>
-            </div>
+      <ModalPortal
+        id="creator-task-selector"
+        isOpen={showTaskSelector}
+        onClose={() => {
+          setShowTaskSelector(false);
+          setSelectedTask('');
+        }}
+        title="Select Task"
+        description="Clock in directly or pick a task to track time automatically."
+        size="md"
+        footer={({ close }) => (
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setSelectedTask('');
+                close();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              disabled={isClockInLoading}
+              onClick={async () => {
+                await performClockIn();
+                close();
+              }}
+            >
+              {isClockInLoading ? 'Processing…' : 'Clock In'}
+            </Button>
           </div>
+        )}
+      >
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700">
+            Select Task (Optional)
+          </label>
+          <select
+            value={selectedTask}
+            onChange={(e) => setSelectedTask(e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+          >
+            <option value="">No task - Just clock in</option>
+            {assignedTasks
+              .filter(t => t && (t.status === ASSET_STATUS.TO_EDIT || !t.status || t.status === ASSET_STATUS.IN_PROGRESS))
+              .map(task => {
+                const shoot = shoots.find(s => s && s.shoot_id === task.shoot_id);
+                const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
+                return (
+                  <option key={task.asset_id} value={task.asset_id}>
+                    {task.title} {client ? `- ${client.company_name}` : ''}
+                  </option>
+                );
+              })}
+          </select>
+          <p className="text-xs text-gray-500">
+            You can clock in without selecting a task, or select one to track time on it.
+          </p>
         </div>
-      )}
+      </ModalPortal>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button
-          onClick={() => navigate('/dashboard/shoots')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+        <Card
+          glass
+          as="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate('/dashboard/assign-shoot');
+          }}
+          className="p-6 flex items-center gap-4 group hover:bg-white/80"
         >
           <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
             <Camera className="w-8 h-8 text-primary" />
@@ -710,10 +838,16 @@ export default function ContentCreatorDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Add Shoot</h3>
             <p className="text-sm text-gray-600">Assign new shoots to videographers</p>
           </div>
-        </button>
-        <button
-          onClick={() => navigate('/dashboard/assign-tasks?action=task')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+        </Card>
+        <Card
+          glass
+          as="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowAssignTaskModal(true);
+          }}
+          className="p-6 flex items-center gap-4 group hover:bg-white/80"
         >
           <div className="p-3 bg-secondary/10 rounded-xl group-hover:bg-secondary/20 transition-colors">
             <FileText className="w-8 h-8 text-secondary" />
@@ -722,10 +856,12 @@ export default function ContentCreatorDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Assign Task</h3>
             <p className="text-sm text-gray-600">Create and assign tasks to editors</p>
           </div>
-        </button>
-        <button
+        </Card>
+        <Card
+          glass
+          as="button"
           onClick={() => navigate('/dashboard/leave-requests')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+          className="p-6 flex items-center gap-4 group hover:bg-white/80"
         >
           <div className="p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
             <Plane className="w-8 h-8 text-orange-600" />
@@ -734,11 +870,11 @@ export default function ContentCreatorDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Leave Requests</h3>
             <p className="text-sm text-gray-600">Request leave or approve team requests</p>
           </div>
-        </button>
+        </Card>
       </div>
 
       {/* Upcoming Calendar */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
@@ -760,7 +896,7 @@ export default function ContentCreatorDashboard() {
               return (
                 <div
                   key={entry.calendar_id || index}
-                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all"
+                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-[transform,opacity,colors,shadow]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -796,11 +932,11 @@ export default function ContentCreatorDashboard() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Assigned Tasks */}
       {assignedTasks.length > 0 && (
-        <div className="glass-card p-6">
+        <Card glass className="p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-purple-600" />
             My Assigned Tasks ({assignedTasks.length})
@@ -815,7 +951,7 @@ export default function ContentCreatorDashboard() {
               return (
                 <div
                   key={task.asset_id || index}
-                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all"
+                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-[transform,opacity,colors,shadow]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -859,7 +995,7 @@ export default function ContentCreatorDashboard() {
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Break Dialog */}
@@ -869,76 +1005,192 @@ export default function ContentCreatorDashboard() {
         onConfirm={handleTakeBreak}
       />
 
-      {/* Clock Out Report Modal */}
-      {showClockOutReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 transition-opacity z-[100]" 
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowClockOutReport(false);
-                setClockOutReport('');
-              }
-            }} 
-          />
-          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              (Optional) Provide a brief summary of what you accomplished today before clocking out.
-            </p>
-            <textarea
-              value={clockOutReport}
-              onChange={(e) => setClockOutReport(e.target.value)}
-              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
-              rows="5"
-              autoFocus
+      <ModalPortal
+        id="creator-clockout-report"
+        isOpen={showClockOutReport}
+        onClose={() => {
+          setShowClockOutReport(false);
+          setClockOutReport('');
+        }}
+        title="Daily Work Report"
+        description="(Optional) Provide a short summary before clocking out."
+        size="md"
+        footer={({ close }) => (
+          <div className="flex gap-3">
+            <Button
+              className="flex-1 gap-2"
               disabled={isClockOutLoading}
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleClockOut(clockOutReport)}
-                disabled={isClockOutLoading}
-                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isClockOutLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="w-5 h-5" />
-                    Clock Out
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                disabled={isClockOutLoading}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
+              onClick={async () => {
+                await handleClockOut(clockOutReport);
+                close();
+              }}
+            >
+              {isClockOutLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  Clock Out
+                </>
+              )}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={isClockOutLoading}
+              onClick={() => {
+                setClockOutReport('');
+                close();
+              }}
+            >
+              Cancel
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      >
+        <textarea
+          value={clockOutReport}
+          onChange={(e) => setClockOutReport(e.target.value)}
+          placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions..."
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow] resize-none"
+          rows="5"
+          disabled={isClockOutLoading}
+        />
+      </ModalPortal>
+
+      {/* Create Task Modal */}
+      <ModalPortal
+        id="create-task-creator"
+        isOpen={showAssignTaskModal}
+        onClose={() => setShowAssignTaskModal(false)}
+        title="Create New Task"
+        size="md"
+      >
+        <form onSubmit={handleCreateTask} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
+            <input
+              type="text"
+              value={newTask.title}
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              placeholder="e.g. Edit Product Photos"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Assign To *</label>
+            <select
+              value={newTask.assigned_to}
+              onChange={(e) => {
+                const user = users.find(u => u.email === e.target.value);
+                setNewTask({
+                  ...newTask,
+                  assigned_to: e.target.value,
+                  assigned_role: user ? user.role : ''
+                });
+              }}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            >
+              <option value="">Select team member...</option>
+              {allAvailableUsers.map(user => (
+                <option key={user.email} value={user.email}>
+                  {user.name} ({user.role})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {newTask.assigned_role === ROLES.CONTENT_CREATOR && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Task Type</label>
+              <select
+                value={newTask.task_type}
+                onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              >
+                <option value="content_creation">Content Creation</option>
+                <option value="posting">Posting</option>
+              </select>
+            </div>
+          )}
+
+          {newTask.task_type === 'posting' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Channel</label>
+                <select
+                  value={newTask.channel}
+                  onChange={(e) => setNewTask({ ...newTask, channel: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+                >
+                  <option value="">Select Channel...</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="YouTube">YouTube</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
+                <input
+                  type="date"
+                  value={newTask.publish_date}
+                  onChange={(e) => setNewTask({ ...newTask, publish_date: e.target.value })}
+                  required
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Deadline *</label>
+            <input
+              type="date"
+              value={newTask.deadline}
+              onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">File Link (Optional)</label>
+            <input
+              type="url"
+              value={newTask.fileLink}
+              onChange={(e) => setNewTask({ ...newTask, fileLink: e.target.value })}
+              placeholder="https://drive.google.com/..."
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAssignTaskModal(false)}
+              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-3 text-white bg-green-600 rounded-xl font-bold hover:bg-green-700 transition-colors"
+            >
+              Create Task
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import { Clock, Calendar, Edit2, Save, X, ChevronLeft, ChevronRight, User, Camera, FileEdit, BarChart3, CheckCircle } from 'lucide-react';
+import ModalPortal from '../components/primitives/ModalPortal.jsx';
+import Card from '../components/primitives/Card.jsx';
 import { COLLECTIONS, ROLES, SHOOT_STATUS, ASSET_STATUS } from '../constants';
 
 export default function WorkHoursPage() {
@@ -266,9 +268,9 @@ export default function WorkHoursPage() {
   if (!isManager && !isLead) {
     return (
       <div className="animate-fadeIn mobile-padding pb-8">
-        <div className="glass-card p-8 text-center">
+        <Card glass className="p-8 text-center">
           <p className="text-gray-600">You don't have permission to view this page.</p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -279,7 +281,7 @@ export default function WorkHoursPage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
           <BarChart3 className="w-8 h-8 text-primary" />
           Work Hours & Completed Work
@@ -287,10 +289,10 @@ export default function WorkHoursPage() {
         <p className="text-gray-600">
           View monthly work hours and detailed completed work for each employee
         </p>
-      </div>
+      </Card>
 
       {/* Month Selector */}
-      <div className="glass-card p-4">
+      <Card glass className="p-4">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
             <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
@@ -300,7 +302,7 @@ export default function WorkHoursPage() {
                   current.setMonth(current.getMonth() - 1);
                   setSelectedMonth(current.toISOString().slice(0, 7));
                 }}
-                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500"
+                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-[transform,opacity,colors,shadow] text-gray-500"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -320,7 +322,7 @@ export default function WorkHoursPage() {
                   }
                 }}
                 disabled={selectedMonth >= currentMonth}
-                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-500 disabled:opacity-30"
+                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-[transform,opacity,colors,shadow] text-gray-500 disabled:opacity-30"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -344,10 +346,10 @@ export default function WorkHoursPage() {
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Work Hours Table */}
-      <div className="glass-card overflow-hidden">
+      <Card glass className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50/50 border-b border-gray-100">
@@ -439,7 +441,7 @@ export default function WorkHoursPage() {
                           {isManager && totalCompleted > 0 ? (
                             <button
                               onClick={() => setShowWorkDetailsModal(employee.email)}
-                              className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition-all hover:scale-105 active:scale-95 shadow-sm border border-blue-100"
+                              className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition-[transform,opacity,colors,shadow] hover:scale-105 active:scale-95 shadow-sm border border-blue-100"
                             >
                               {totalCompleted} {totalCompleted === 1 ? 'Item' : 'Items'}
                             </button>
@@ -450,7 +452,7 @@ export default function WorkHoursPage() {
                                   setExpandedEmployee(isExpanded ? null : employee.email);
                                 }
                               }}
-                              className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-all ${totalCompleted > 0
+                              className={`px-3 py-1.5 text-sm font-bold rounded-lg transition-[transform,opacity,colors,shadow] ${totalCompleted > 0
                                   ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 hover:scale-105 active:scale-95 shadow-sm border border-blue-100 cursor-pointer'
                                   : 'text-gray-400 cursor-default'
                                 }`}
@@ -581,10 +583,10 @@ export default function WorkHoursPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Info Box */}
-      <div className="glass-card p-4 bg-blue-50/50 border-blue-100 flex items-start gap-3">
+      <Card glass className="p-4 bg-blue-50/50 border-blue-100 flex items-start gap-3">
         <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
           <Clock className="w-5 h-5" />
         </div>
@@ -597,134 +599,113 @@ export default function WorkHoursPage() {
             <li>• View previous months by selecting them from the month picker</li>
           </ul>
         </div>
-      </div>
+      </Card>
 
-      {/* Work Details Modal for Managers */}
-      {showWorkDetailsModal && isManager && (() => {
-        const employee = users.find(u => u && u.email === showWorkDetailsModal);
-        const workDetails = getEmployeeWorkDetails(showWorkDetailsModal);
-        const completedShoots = workDetails.shoots;
-        const completedTasks = workDetails.tasks;
+      <ModalPortal
+        id="work-hours-details"
+        isOpen={Boolean(showWorkDetailsModal && isManager)}
+        onClose={() => setShowWorkDetailsModal(null)}
+        title={`Work Details - ${users.find(u => u && u.email === showWorkDetailsModal)?.name || showWorkDetailsModal || ''}`}
+        description={new Date(`${selectedMonth}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        size="lg"
+      >
+        {showWorkDetailsModal && isManager ? (() => {
+          const workDetails = getEmployeeWorkDetails(showWorkDetailsModal);
+          const completedShoots = workDetails.shoots;
+          const completedTasks = workDetails.tasks;
 
-        return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div
-              className="fixed inset-0 transition-opacity z-[100]"
-              style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-              onClick={() => setShowWorkDetailsModal(null)}
-            />
-            <div className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn p-0 flex flex-col bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-              <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-[102] rounded-t-2xl">
+          return (
+            <div className="space-y-8">
+              {completedShoots.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">
-                    Work Details - {employee?.name || showWorkDetailsModal}
-                  </h3>
-                  <p className="text-sm text-gray-500 font-medium mt-0.5">
-                    {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </p>
+                  <h4 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Camera className="w-5 h-5 text-primary" />
+                    Completed Shoots ({completedShoots.length})
+                  </h4>
+                  <div className="grid gap-3">
+                    {completedShoots.map((shoot, idx) => {
+                      const shootObj = shoots.find(s => s && s.shoot_id === shoot.shoot_id);
+                      const client = shootObj ? clients.find(c => c && c.client_id === shootObj.client_id) : null;
+                      return (
+                        <div key={idx} className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-shadow">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-bold text-gray-900">
+                                {shootObj?.title || shootObj?.shoot_name || 'General Shoot'}
+                              </div>
+                              {client && (
+                                <div className="text-xs text-primary font-bold uppercase tracking-wider mt-1">
+                                  {client.company_name}
+                                </div>
+                              )}
+                              <div className="text-xs text-gray-500 mt-1 font-medium">
+                                {new Date(shoot.start_time || shoot.clock_in || shoot.date).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div className="text-right bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm">
+                              <div className="font-bold text-gray-900">
+                                {parseFloat(shoot.work_duration || shoot.duration || 0).toFixed(2)}h
+                              </div>
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Hours</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <button
-                  onClick={() => setShowWorkDetailsModal(null)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+              )}
 
-              <div className="p-6 space-y-8 overflow-y-auto">
-                {/* Completed Shoots */}
-                {completedShoots.length > 0 && (
-                  <div>
-                    <h4 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Camera className="w-5 h-5 text-primary" />
-                      Completed Shoots ({completedShoots.length})
-                    </h4>
-                    <div className="grid gap-3">
-                      {completedShoots.map((shoot, idx) => {
-                        const shootObj = shoots.find(s => s && s.shoot_id === shoot.shoot_id);
-                        const client = shootObj ? clients.find(c => c && c.client_id === shootObj.client_id) : null;
-                        return (
-                          <div key={idx} className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-shadow">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <div className="font-bold text-gray-900">
-                                  {shootObj?.title || shootObj?.shoot_name || 'General Shoot'}
-                                </div>
-                                {client && (
-                                  <div className="text-xs text-primary font-bold uppercase tracking-wider mt-1">
-                                    {client.company_name}
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-500 mt-1 font-medium">
-                                  {new Date(shoot.start_time || shoot.clock_in || shoot.date).toLocaleDateString()}
-                                </div>
+              {completedTasks.length > 0 && (
+                <div>
+                  <h4 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileEdit className="w-5 h-5 text-purple-600" />
+                    Completed Tasks ({completedTasks.length})
+                  </h4>
+                  <div className="grid gap-3">
+                    {completedTasks.map((task, idx) => {
+                      const asset = assets.find(a => a && a.asset_id === task.asset_id);
+                      const shoot = asset ? shoots.find(s => s && s.shoot_id === (asset.shoot_id || asset.linked_shoot_id)) : null;
+                      const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
+                      return (
+                        <div key={idx} className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-shadow">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-bold text-gray-900">
+                                {asset?.title || 'Untitled Task'}
                               </div>
-                              <div className="text-right bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm">
-                                <div className="font-bold text-gray-900">
-                                  {parseFloat(shoot.work_duration || shoot.duration || 0).toFixed(2)}h
+                              {client && (
+                                <div className="text-xs text-primary font-bold uppercase tracking-wider mt-1">
+                                  {client.company_name}
                                 </div>
-                                <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Hours</div>
+                              )}
+                              <div className="text-xs text-gray-500 mt-1 font-medium">
+                                {new Date(task.start_time).toLocaleDateString()}
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Completed Tasks */}
-                {completedTasks.length > 0 && (
-                  <div>
-                    <h4 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <FileEdit className="w-5 h-5 text-purple-600" />
-                      Completed Tasks ({completedTasks.length})
-                    </h4>
-                    <div className="grid gap-3">
-                      {completedTasks.map((task, idx) => {
-                        const asset = assets.find(a => a && a.asset_id === task.asset_id);
-                        const shoot = asset ? shoots.find(s => s && s.shoot_id === (asset.shoot_id || asset.linked_shoot_id)) : null;
-                        const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
-                        return (
-                          <div key={idx} className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-shadow">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <div className="font-bold text-gray-900">
-                                  {asset?.title || 'Untitled Task'}
-                                </div>
-                                {client && (
-                                  <div className="text-xs text-primary font-bold uppercase tracking-wider mt-1">
-                                    {client.company_name}
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-500 mt-1 font-medium">
-                                  {new Date(task.start_time).toLocaleDateString()}
-                                </div>
+                            <div className="text-right bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm">
+                              <div className="font-bold text-gray-900">
+                                {parseFloat(task.work_duration || task.duration || 0).toFixed(2)}h
                               </div>
-                              <div className="text-right bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm">
-                                <div className="font-bold text-gray-900">
-                                  {parseFloat(task.work_duration || task.duration || 0).toFixed(2)}h
-                                </div>
-                                <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Hours</div>
-                              </div>
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Hours</div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
+              )}
 
-                {completedShoots.length === 0 && completedTasks.length === 0 && (
-                  <div className="text-center py-12 text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
-                    <p>No completed work for this month</p>
-                  </div>
-                )}
-              </div>
+              {completedShoots.length === 0 && completedTasks.length === 0 && (
+                <div className="text-center py-12 text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                  <p>No completed work for this month</p>
+                </div>
+              )}
             </div>
-          </div>
-        );
-      })()}
+          );
+        })() : null}
+      </ModalPortal>
     </div>
   );
 }

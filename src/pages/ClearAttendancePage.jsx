@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../contexts/AuthContext';
+import Card from '../components/primitives/Card.jsx';
 import { ROLES, COLLECTIONS } from '../constants';
 import { clearOldAttendance, clearOldPhotographerAttendance } from '../utils/clearOldAttendance';
 import { Trash2, AlertTriangle, CheckCircle, Loader } from 'lucide-react';
@@ -19,11 +20,11 @@ export default function ClearAttendancePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="glass-card p-12 text-center">
+          <Card glass className="p-12 text-center">
             <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
             <p className="text-gray-600">Only managers can access this page.</p>
-          </div>
+          </Card>
         </div>
       </div>
     );
@@ -132,7 +133,7 @@ export default function ClearAttendancePage() {
 
         <div className="space-y-6">
           {/* Attendance Records */}
-          <div className="glass-card p-6">
+          <Card glass className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Attendance Records</h2>
@@ -167,7 +168,7 @@ export default function ClearAttendancePage() {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-red-600 h-2 rounded-full transition-[transform,opacity,colors,shadow] duration-300"
                     style={{ width: `${(progress.current / progress.total) * 100}%` }}
                   />
                 </div>
@@ -195,10 +196,10 @@ export default function ClearAttendancePage() {
                 </div>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Photographer Attendance Records */}
-          <div className="glass-card p-6">
+          <Card glass className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Photographer Attendance Records</h2>
@@ -224,10 +225,10 @@ export default function ClearAttendancePage() {
                 )}
               </button>
             </div>
-          </div>
+          </Card>
 
           {/* Warning */}
-          <div className="glass-card p-6 bg-yellow-50 border-2 border-yellow-200">
+          <Card glass className="p-6 bg-yellow-50 border-2 border-yellow-200">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-6 h-6 text-yellow-600 mt-0.5" />
               <div>
@@ -238,7 +239,7 @@ export default function ClearAttendancePage() {
                 </p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

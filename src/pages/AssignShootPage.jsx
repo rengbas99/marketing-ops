@@ -176,7 +176,7 @@ export default function AssignShootPage() {
                 <div key={step.id} className="flex items-center flex-1">
                   <div className="flex flex-col items-center flex-1">
                     <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-[transform,opacity,colors,shadow] duration-300 ${
                         isActive
                           ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg scale-110'
                           : isCompleted
@@ -200,7 +200,7 @@ export default function AssignShootPage() {
                   </div>
                   {index < steps.length - 1 && (
                     <div
-                      className={`flex-1 h-1 mx-2 transition-all duration-300 ${
+                      className={`flex-1 h-1 mx-2 transition-[transform,opacity,colors,shadow] duration-300 ${
                         isCompleted ? 'bg-green-500' : 'bg-gray-200'
                       }`}
                     />
@@ -233,7 +233,7 @@ export default function AssignShootPage() {
                       value={newShoot.shoot_name}
                       onChange={(e) => setNewShoot({ ...newShoot, shoot_name: e.target.value })}
                       placeholder="e.g. Product Launch Shoot, Brand Campaign..."
-                      className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-lg"
+                      className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-[transform,opacity,colors,shadow] text-lg"
                     />
                   </div>
 
@@ -244,7 +244,7 @@ export default function AssignShootPage() {
                     <select
                       value={newShoot.client_id}
                       onChange={(e) => setNewShoot({ ...newShoot, client_id: e.target.value })}
-                      className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-lg"
+                      className="w-full px-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-[transform,opacity,colors,shadow] text-lg"
                     >
                       <option value="">No client (General shoot)</option>
                       {(Array.isArray(clients) ? clients : []).map(client => (
@@ -266,7 +266,7 @@ export default function AssignShootPage() {
                         value={newShoot.location_name}
                         onChange={(e) => setNewShoot({ ...newShoot, location_name: e.target.value })}
                         placeholder="e.g. Studio A, Outdoor Location..."
-                        className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-lg"
+                        className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-[transform,opacity,colors,shadow] text-lg"
                       />
                     </div>
                   </div>
@@ -295,7 +295,7 @@ export default function AssignShootPage() {
                           key={person.email}
                           type="button"
                           onClick={() => setNewShoot({ ...newShoot, photographer_id: person.email })}
-                          className={`p-4 rounded-xl border-2 transition-all text-left ${
+                          className={`p-4 rounded-xl border-2 transition-[transform,opacity,colors,shadow] text-left ${
                             isSelected
                               ? 'border-blue-500 bg-blue-50 shadow-md'
                               : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
@@ -352,7 +352,7 @@ export default function AssignShootPage() {
                         value={newShoot.date}
                         onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })}
                         min={new Date().toISOString().split('T')[0]}
-                        className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-lg"
+                        className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-[transform,opacity,colors,shadow] text-lg"
                       />
                     </div>
                   </div>
@@ -367,7 +367,7 @@ export default function AssignShootPage() {
                         type="time"
                         value={newShoot.time}
                         onChange={(e) => setNewShoot({ ...newShoot, time: e.target.value })}
-                        className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-lg"
+                        className="w-full pl-12 pr-5 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-[transform,opacity,colors,shadow] text-lg"
                       />
                     </div>
                   </div>
@@ -479,7 +479,7 @@ export default function AssignShootPage() {
                   type="button"
                   onClick={handleNext}
                   disabled={!canProceed()}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-bold hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-500/30"
+                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-bold hover:from-blue-600 hover:to-purple-700 transition-[transform,opacity,colors,shadow] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-500/30"
                 >
                   Next Step
                   <ArrowRight className="w-5 h-5" />
@@ -489,7 +489,7 @@ export default function AssignShootPage() {
                   type="button"
                   onClick={handleAssignShoot}
                   disabled={isCreatingShoot || !canProceed()}
-                  className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-green-500/30"
+                  className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-[transform,opacity,colors,shadow] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-green-500/30"
                 >
                   {isCreatingShoot ? (
                     <>

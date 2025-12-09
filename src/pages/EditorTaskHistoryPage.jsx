@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import Card from '../components/primitives/Card.jsx';
 import { ArrowLeft, Calendar, CheckCircle, XCircle, FileText, User, Filter } from 'lucide-react';
 import { COLLECTIONS, ASSET_STATUS, ROLES } from '../constants';
 
@@ -144,7 +145,7 @@ export default function EditorTaskHistoryPage() {
         </div>
 
         {/* Filters */}
-        <div className="glass-card p-4 mb-6 flex flex-wrap gap-4">
+        <Card glass className="p-4 mb-6 flex flex-wrap gap-4">
           {user?.role !== ROLES.EDITOR && (
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-bold text-gray-700 mb-2">Filter by Editor</label>
@@ -189,16 +190,16 @@ export default function EditorTaskHistoryPage() {
               <option value="oldest">Oldest First</option>
             </select>
           </div>
-        </div>
+        </Card>
 
         {/* Tasks List */}
         <div className="space-y-4">
           {filteredTasks.length === 0 ? (
-            <div className="glass-card p-12 text-center">
+            <Card glass className="p-12 text-center">
               <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-700 mb-2">No tasks found</h3>
               <p className="text-gray-500">Try adjusting your filters</p>
-            </div>
+            </Card>
           ) : (
             filteredTasks.map((task) => {
               const editor = users.find(u => 
@@ -222,9 +223,10 @@ export default function EditorTaskHistoryPage() {
               }
 
               return (
-                <div
+                <Card
+                  glass
                   key={task.asset_id}
-                  className="glass-card p-6 hover:shadow-lg transition-all"
+                  className="p-6 hover:shadow-lg transition-[transform,opacity,colors,shadow]"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -270,7 +272,7 @@ export default function EditorTaskHistoryPage() {
                       )}
                     </div>
                   </div>
-                </div>
+                </Card>
               );
             })
           )}

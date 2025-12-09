@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { googleAuth } from '../services/googleAuth';
 import { useToast } from './Toast';
+import Card from './primitives/Card.jsx';
 import { LogIn, LogOut, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function GoogleAuthButton() {
@@ -85,7 +86,7 @@ export default function GoogleAuthButton() {
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      <div className="glass-card p-4 max-w-xs backdrop-blur-md bg-white/90 border border-white/20 shadow-2xl">
+      <Card glass className="p-4 max-w-xs backdrop-blur-md bg-white/90 border border-white/20 shadow-2xl">
         {isAuthenticated ? (
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-green-600">
@@ -132,7 +133,7 @@ export default function GoogleAuthButton() {
             </button>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

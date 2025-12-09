@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import Card from './primitives/Card.jsx';
 import { FileEdit, Clock, User, AlertCircle } from 'lucide-react';
 import { ASSET_STATUS } from '../constants';
 
@@ -48,9 +49,10 @@ export default function ApprovalsList({ assets, users, shoots, clients, onUpdate
           }
 
           return (
-            <div
+            <Card
+              glass
               key={asset.asset_id || index}
-              className="glass-card p-4 hover:shadow-md transition-all cursor-pointer animate-fadeIn border-l-4 border-l-purple-500"
+              className="p-4 hover:shadow-md transition-[transform,opacity,colors,shadow] cursor-pointer animate-fadeIn border-l-4 border-l-purple-500"
               style={{ animationDelay: `${index * 0.05}s` }}
               onClick={() => navigate(`/dashboard/review/${asset.asset_id}`)}
             >
@@ -100,7 +102,7 @@ export default function ApprovalsList({ assets, users, shoots, clients, onUpdate
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-purple-500 h-2 rounded-full transition-all duration-500"
+                        className="bg-purple-500 h-2 rounded-full"
                         style={{ width: `${asset.work_progress || 0}%` }}
                       />
                     </div>
@@ -122,7 +124,7 @@ export default function ApprovalsList({ assets, users, shoots, clients, onUpdate
                   </button>
                 </div>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

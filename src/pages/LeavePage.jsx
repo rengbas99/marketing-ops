@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
+import Card from '../components/primitives/Card.jsx';
 import { Plane, Calendar, CheckCircle, XCircle, Clock, Plus, X, User, Briefcase } from 'lucide-react';
 import { COLLECTIONS, ROLES } from '../constants';
 
@@ -133,7 +134,7 @@ export default function LeavePage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
             <Plane className="w-8 h-8 text-primary" />
@@ -152,11 +153,11 @@ export default function LeavePage() {
             <span>{showForm ? 'Cancel Request' : 'Request Leave'}</span>
           </button>
         )}
-      </div>
+      </Card>
 
       {/* Request Form */}
       {showForm && (
-        <div className="glass-card p-6 animate-fadeIn">
+        <Card glass className="p-6 animate-fadeIn">
           <h2 className="text-xl font-bold text-gray-900 mb-6">New Leave Request</h2>
           <form onSubmit={handleSubmitLeave} className="space-y-6">
             <div>
@@ -164,7 +165,7 @@ export default function LeavePage() {
               <select
                 value={newLeave.leave_type}
                 onChange={(e) => setNewLeave({ ...newLeave, leave_type: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
               >
                 <option value="Sick">Sick Leave</option>
                 <option value="Casual">Casual Leave</option>
@@ -180,7 +181,7 @@ export default function LeavePage() {
                   value={newLeave.start_date}
                   onChange={(e) => setNewLeave({ ...newLeave, start_date: e.target.value })}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
               <div>
@@ -191,7 +192,7 @@ export default function LeavePage() {
                   value={newLeave.end_date}
                   onChange={(e) => setNewLeave({ ...newLeave, end_date: e.target.value })}
                   min={newLeave.start_date || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
             </div>
@@ -202,7 +203,7 @@ export default function LeavePage() {
                 value={newLeave.reason}
                 onChange={(e) => setNewLeave({ ...newLeave, reason: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow] resize-none"
                 placeholder="Please provide a reason for your leave request..."
               />
             </div>
@@ -222,12 +223,12 @@ export default function LeavePage() {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Manager/Lead View - Pending Leaves */}
       {(isManager || isLead) && pendingLeaves.length > 0 && (
-        <div className="glass-card p-6 bg-orange-50/50 border-orange-100">
+        <Card glass className="p-6 bg-orange-50/50 border-orange-100">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <Clock className="w-6 h-6 text-orange-500" />
             Pending Requests ({pendingLeaves.length})
@@ -250,11 +251,11 @@ export default function LeavePage() {
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* My Leaves / All Leaves */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <Briefcase className="w-6 h-6 text-primary" />
           {(isManager || isLead) ? 'All Leave Requests' : 'My Leave Requests'}
@@ -283,7 +284,7 @@ export default function LeavePage() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -313,7 +314,7 @@ function LeaveCard({ leave, employee, onApprove, onReject, index, isPending }) {
 
   return (
     <div
-      className={`p-5 rounded-xl border transition-all hover:shadow-md animate-fadeIn ${isPending ? 'bg-white border-orange-200 shadow-sm' : 'bg-white border-gray-100'
+      className={`p-5 rounded-xl border transition-[transform,opacity,colors,shadow] hover:shadow-md animate-fadeIn ${isPending ? 'bg-white border-orange-200 shadow-sm' : 'bg-white border-gray-100'
         }`}
       style={{ animationDelay: `${index * 0.1}s` }}
     >

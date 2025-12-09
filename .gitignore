@@ -4,3 +4,9 @@ dist
 .env.local
 .DS_Store
 *.log
+
+# Documentation files (not to be committed)
+*.md
+!README.md
+!PROJECT_ARCHITECTURE.md
+DEPLOY.sh

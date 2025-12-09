@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dev Login Helper</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.02);
+    }
+    .manager { background: #3b82f6; color: white; }
+    .lead { background: #10b981; color: white; }
+    .photographer { background: #f59e0b; color: white; }
+    .editor { background: #8b5cf6; color: white; }
+    .creator { background: #ec4899; color: white; }
+    .logout { background: #ef4444; color: white; }
+    h1 { text-align: center; color: #1f2937; }
+    .info {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #3b82f6;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 Dev Login Helper</h1>
+  <div class="info">
+    <strong>Instructions:</strong><br>
+    1. Open your app in another tab<br>
+    2. Click a button below to login<br>
+    3. The app will automatically refresh and log you in
+  </div>
+  
+  <button class="manager" onclick="login('manager')">Login as Manager</button>
+  <button class="lead" onclick="login('lead')">Login as Lead</button>
+  <button class="photographer" onclick="login('photographer')">Login as Photographer</button>
+  <button class="editor" onclick="login('editor')">Login as Editor</button>
+  <button class="creator" onclick="login('creator')">Login as Content Creator</button>
+  <button class="logout" onclick="logout()">Logout</button>
+
+  <script>
+    const users = {
+      manager: { email: 'manager@test.com', name: 'Test Manager', role: 'manager', avatar: '' },
+      lead: { email: 'lead@test.com', name: 'Test Lead', role: 'lead', avatar: '' },
+      photographer: { email: 'photographer@test.com', name: 'Test Photographer', role: 'photographer', avatar: '' },
+      editor: { email: 'editor@test.com', name: 'Test Editor', role: 'editor', avatar: '' },
+      creator: { email: 'creator@test.com', name: 'Test Content Creator', role: 'content_creator', avatar: '' }
+    };
+
+    const routes = {
+      manager: '/dashboard/manager',
+      lead: '/dashboard/lead',
+      photographer: '/dashboard/photographer',
+      editor: '/dashboard/editor',
+      creator: '/dashboard/content-creator'
+    };
+
+    function login(role) {
+      const user = users[role];
+      if (!user) {
+        alert('Invalid role');
+        return;
+      }
+      
+      // Store in localStorage
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Dispatch event
+      window.dispatchEvent(new CustomEvent('userUpdated', { detail: { user } }));
+      
+      // Try to find the app window and update it
+      const appUrl = window.location.origin;
+      const targetUrl = appUrl + routes[role];
+      
+      alert(`✅ Logged in as ${user.name}!\n\nRedirecting to: ${targetUrl}`);
+      
+      // Open or redirect to app
+      window.open(targetUrl, '_blank');
+    }
+
+    function logout() {
+      localStorage.removeItem('user');
+      window.dispatchEvent(new CustomEvent('userUpdated', { detail: { user: null } }));
+      alert('✅ Logged out!');
+    }
+  </script>
+</body>
+</html>
+

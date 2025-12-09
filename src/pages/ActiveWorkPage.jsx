@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import Card from '../components/primitives/Card.jsx';
 import { Camera, FileEdit, Clock, Coffee, User, MapPin, Link as LinkIcon, TrendingUp, CheckCircle, Activity } from 'lucide-react';
 import { formatBreakDuration, formatTime as formatTimeUtil } from '../utils/timeFormatting';
 import { COLLECTIONS, SHOOT_STATUS, ASSET_STATUS } from '../constants';
@@ -193,17 +194,17 @@ export default function ActiveWorkPage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Active Work Tracking</h1>
           <p className="text-gray-600">Real-time view of team activity and progress</p>
         </div>
 
         {/* View Mode Toggle */}
-        <div className="glass-panel p-1 flex gap-1">
+        <Card glass className="p-1 flex gap-1">
           <button
             onClick={() => setViewMode('active')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'active'
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'active'
                 ? 'bg-primary text-white shadow-md'
                 : 'text-gray-500 hover:bg-gray-100'
               }`}
@@ -212,20 +213,20 @@ export default function ActiveWorkPage() {
           </button>
           <button
             onClick={() => setViewMode('today')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'today'
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'today'
                 ? 'bg-primary text-white shadow-md'
                 : 'text-gray-500 hover:bg-gray-100'
               }`}
           >
             Today's Summary
           </button>
-        </div>
-      </div>
+        </Card>
+      </Card>
 
       {viewMode === 'active' ? (
         <>
           {/* Active Photographers */}
-          <div className="glass-card p-6">
+          <Card glass className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-blue-100 rounded-lg text-primary">
                 <Camera className="w-6 h-6" />
@@ -239,7 +240,7 @@ export default function ActiveWorkPage() {
                 activePhotographers.map((att, index) => (
                   <div
                     key={att.attendance_id || index}
-                    className={`p-5 rounded-xl border transition-all hover:shadow-md ${att.activeBreak
+                    className={`p-5 rounded-xl border transition-[transform,opacity,colors,shadow] hover:shadow-md ${att.activeBreak
                         ? 'bg-orange-50/50 border-orange-200'
                         : 'bg-white border-gray-100'
                       }`}
@@ -309,10 +310,10 @@ export default function ActiveWorkPage() {
                 </div>
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Active Editors */}
-          <div className="glass-card p-6">
+          <Card glass className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
                 <FileEdit className="w-6 h-6" />
@@ -326,7 +327,7 @@ export default function ActiveWorkPage() {
                 activeEditors.map((log, index) => (
                   <div
                     key={log.log_id || index}
-                    className={`p-5 rounded-xl border transition-all hover:shadow-md ${log.activeBreak
+                    className={`p-5 rounded-xl border transition-[transform,opacity,colors,shadow] hover:shadow-md ${log.activeBreak
                         ? 'bg-orange-50/50 border-orange-200'
                         : 'bg-white border-gray-100'
                       }`}
@@ -381,7 +382,7 @@ export default function ActiveWorkPage() {
                         </div>
                         <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                           <div
-                            className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+                            className="bg-primary h-2 rounded-full transition-[transform,opacity,colors,shadow] duration-500 ease-out"
                             style={{ width: `${log.asset.work_progress || 0}%` }}
                           />
                         </div>
@@ -396,37 +397,37 @@ export default function ActiveWorkPage() {
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         </>
       ) : (
         <>
           {/* Today's Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="glass-card p-4 bg-blue-50/50 border-blue-100">
+            <Card glass className="p-4 bg-blue-50/50 border-blue-100">
               <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Shoots</div>
               <div className="text-3xl font-bold text-gray-900">{completedShoots.length}</div>
-            </div>
-            <div className="glass-card p-4 bg-purple-50/50 border-purple-100">
+            </Card>
+            <Card glass className="p-4 bg-purple-50/50 border-purple-100">
               <div className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Tasks</div>
               <div className="text-3xl font-bold text-gray-900">{completedTasks.length}</div>
-            </div>
-            <div className="glass-card p-4 bg-green-50/50 border-green-100">
+            </Card>
+            <Card glass className="p-4 bg-green-50/50 border-green-100">
               <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Total Hours</div>
               <div className="text-3xl font-bold text-gray-900">
                 {Object.values(hoursByPerson).reduce((sum, p) => sum + p.hours, 0).toFixed(1)}h
               </div>
-            </div>
-            <div className="glass-card p-4 bg-orange-50/50 border-orange-100">
+            </Card>
+            <Card glass className="p-4 bg-orange-50/50 border-orange-100">
               <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Completed</div>
               <div className="text-3xl font-bold text-gray-900">
                 {completedShoots.length + completedTasks.length}
               </div>
-            </div>
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Completed Shoots */}
-            <div className="glass-card p-6">
+            <Card glass className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-500" />
                 Shoots Completed Today
@@ -457,10 +458,10 @@ export default function ActiveWorkPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
 
             {/* Completed Tasks */}
-            <div className="glass-card p-6">
+            <Card glass className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-500" />
                 Tasks Completed Today
@@ -491,11 +492,11 @@ export default function ActiveWorkPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* Team Hours Breakdown */}
-          <div className="glass-card p-6 mt-8">
+          <Card glass className="p-6 mt-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
               Team Hours Breakdown
@@ -514,7 +515,7 @@ export default function ActiveWorkPage() {
                     <div className="flex items-center gap-4">
                       <div className="w-32 md:w-48 bg-gray-200 rounded-full h-2.5 overflow-hidden hidden sm:block">
                         <div
-                          className="bg-primary h-2.5 rounded-full transition-all duration-500"
+                          className="bg-primary h-2.5 rounded-full transition-[transform,opacity,colors,shadow] duration-500"
                           style={{ width: `${Math.min((person.hours / 8) * 100, 100)}%` }}
                         />
                       </div>
@@ -530,7 +531,7 @@ export default function ActiveWorkPage() {
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         </>
       )}
     </div>

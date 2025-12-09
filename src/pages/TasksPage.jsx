@@ -7,6 +7,9 @@ import BreakDialog from '../components/BreakDialog';
 import BreakTimer from '../components/BreakTimer';
 import WorkLinksModal from '../components/WorkLinksModal';
 import ProgressTracker from '../components/ProgressTracker';
+import ModalPortal from '../components/primitives/ModalPortal.jsx';
+import Card from '../components/primitives/Card.jsx';
+import Button from '../components/primitives/Button.jsx';
 import { FileEdit, Clock, AlertCircle, Coffee, Link as LinkIcon, CheckCircle, Play, Pause, Users, X, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import { COLLECTIONS, ROLES, ASSET_STATUS } from '../constants';
 import UpdateAssetModal from '../components/UpdateAssetModal';
@@ -368,7 +371,7 @@ export default function TasksPage() {
       />
 
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">My Tasks</h1>
@@ -382,11 +385,11 @@ export default function TasksPage() {
             View Completed Tasks
           </button>
         </div>
-      </div>
+      </Card>
 
       {/* Team Workload Section */}
       {activeTeamWork.length > 0 && (
-        <div className="glass-card p-6">
+        <Card glass className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
@@ -452,7 +455,7 @@ export default function TasksPage() {
                 <div
                   key={work.log_id || index}
                   onClick={() => setSelectedEditorWorkload({ ...work, previousTasks, upcomingTasks })}
-                  className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all cursor-pointer"
+                  className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-[transform,opacity,colors,shadow] cursor-pointer"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm">
@@ -476,12 +479,12 @@ export default function TasksPage() {
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Active Timer Card */}
       {activeTimeLog && (
-        <div className={`glass-card p-6 relative overflow-hidden ${activeBreak ? 'border-orange-200' : 'border-primary/20'
+        <Card glass className={`p-6 relative overflow-hidden ${activeBreak ? 'border-orange-200' : 'border-primary/20'
           }`}>
           {/* Background Gradient */}
           <div className={`absolute inset-0 opacity-10 pointer-events-none ${activeBreak
@@ -531,32 +534,34 @@ export default function TasksPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {!activeBreak ? (
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => setShowBreakDialog(true)}
-                  className="glass-button bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 flex items-center justify-center gap-2 py-3"
+                  icon={Coffee}
+                  className="flex items-center justify-center gap-2"
                 >
-                  <Coffee className="w-5 h-5" />
                   Take Break
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   onClick={handleEndBreak}
-                  className="glass-button bg-orange-500 text-white hover:bg-orange-600 border-none flex items-center justify-center gap-2 py-3"
+                  icon={Play}
+                  className="bg-orange-500 hover:bg-orange-600 text-white border-none flex items-center justify-center gap-2"
                 >
-                  <Play className="w-5 h-5" />
                   End Break
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setShowWorkLinks(true)}
-                className="glass-button bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 flex items-center justify-center gap-2 py-3"
+                icon={LinkIcon}
+                className="flex items-center justify-center gap-2"
               >
-                <LinkIcon className="w-5 h-5" />
                 Work Links
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Kanban Board */}
@@ -607,133 +612,118 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Editor Workload Detail Modal */}
-      {selectedEditorWorkload && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={() => setSelectedEditorWorkload(null)} />
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="sticky top-0 bg-white border-b border-gray-100 pb-4 mb-6 -mx-6 px-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg">
-                    {selectedEditorWorkload.editor?.name?.charAt(0) || 'E'}
+      <ModalPortal
+        id="tasks-editor-workload"
+        isOpen={Boolean(selectedEditorWorkload)}
+        onClose={() => setSelectedEditorWorkload(null)}
+        title={selectedEditorWorkload ? (selectedEditorWorkload.editor?.name || selectedEditorWorkload.editor_email) : ''}
+        description={
+          selectedEditorWorkload
+            ? `Currently working on: ${selectedEditorWorkload.asset?.title || 'Unknown'}`
+            : undefined
+        }
+        size="lg"
+      >
+        {selectedEditorWorkload ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <ChevronLeft className="w-5 h-5 text-gray-400" />
+                Previous Tasks (Last 6)
+              </h4>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                {selectedEditorWorkload.previousTasks && selectedEditorWorkload.previousTasks.length > 0 ? (
+                  selectedEditorWorkload.previousTasks.map((task, index) => {
+                    const shoot = task?.shoot_id ? data.Shoots?.find(s => s && s.shoot_id === task.shoot_id) : null;
+                    const client = shoot ? data.Clients?.find(c => c && c.client_id === shoot.client_id) : null;
+                    let deadlineStr = '';
+                    try {
+                      if (task?.deadline) {
+                        const deadline = new Date(task.deadline);
+                        if (!isNaN(deadline.getTime())) {
+                          deadlineStr = deadline.toLocaleDateString();
+                        }
+                      }
+                    } catch (e) {
+                      // Silently handle date parsing errors
+                    }
+                    return (
+                      <div key={task?.asset_id || index} className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                        <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
+                        {client && (
+                          <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
+                        )}
+                        {deadlineStr && (
+                          <p className="text-xs text-gray-500">
+                            Completed: {deadlineStr}
+                          </p>
+                        )}
+                        <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
+                          {task?.status || 'Completed'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <p className="text-sm">No previous tasks</p>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">{selectedEditorWorkload.editor?.name || selectedEditorWorkload.editor_email}</h3>
-                    <p className="text-sm text-gray-600">Currently working on: {selectedEditorWorkload.asset?.title || 'Unknown'}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedEditorWorkload(null)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Previous Tasks */}
-              <div>
-                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <ChevronLeft className="w-5 h-5 text-gray-400" />
-                  Previous Tasks (Last 6)
-                </h4>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                  {selectedEditorWorkload.previousTasks && selectedEditorWorkload.previousTasks.length > 0 ? (
-                    selectedEditorWorkload.previousTasks.map((task, index) => {
-                      const shoot = task?.shoot_id ? data.Shoots?.find(s => s && s.shoot_id === task.shoot_id) : null;
-                      const client = shoot ? data.Clients?.find(c => c && c.client_id === shoot.client_id) : null;
-                      let deadlineStr = '';
-                      try {
-                        if (task?.deadline) {
-                          const deadline = new Date(task.deadline);
-                          if (!isNaN(deadline.getTime())) {
-                            deadlineStr = deadline.toLocaleDateString();
-                          }
+            <div>
+              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+                Upcoming Tasks (Next 6)
+              </h4>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                {selectedEditorWorkload.upcomingTasks && selectedEditorWorkload.upcomingTasks.length > 0 ? (
+                  selectedEditorWorkload.upcomingTasks.map((task, index) => {
+                    const shoot = task?.shoot_id ? data.Shoots?.find(s => s && s.shoot_id === task.shoot_id) : null;
+                    const client = shoot ? data.Clients?.find(c => c && c.client_id === shoot.client_id) : null;
+                    let isOverdue = false;
+                    let deadlineStr = '';
+                    try {
+                      if (task?.deadline) {
+                        const deadline = new Date(task.deadline);
+                        if (!isNaN(deadline.getTime())) {
+                          deadlineStr = deadline.toLocaleDateString();
+                          isOverdue = deadline < new Date();
                         }
-                      } catch (e) {
-                        console.error('Error parsing deadline:', e);
                       }
-                      return (
-                        <div key={task?.asset_id || index} className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                          <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
-                          {client && (
-                            <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
-                          )}
-                          {deadlineStr && (
-                            <p className="text-xs text-gray-500">
-                              Completed: {deadlineStr}
-                            </p>
-                          )}
-                          <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
-                            {task?.status || 'Completed'}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                      <p className="text-sm">No previous tasks</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Upcoming Tasks */}
-              <div>
-                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
-                  Upcoming Tasks (Next 6)
-                </h4>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                  {selectedEditorWorkload.upcomingTasks && selectedEditorWorkload.upcomingTasks.length > 0 ? (
-                    selectedEditorWorkload.upcomingTasks.map((task, index) => {
-                      const shoot = task?.shoot_id ? data.Shoots?.find(s => s && s.shoot_id === task.shoot_id) : null;
-                      const client = shoot ? data.Clients?.find(c => c && c.client_id === shoot.client_id) : null;
-                      let isOverdue = false;
-                      let deadlineStr = '';
-                      try {
-                        if (task?.deadline) {
-                          const deadline = new Date(task.deadline);
-                          if (!isNaN(deadline.getTime())) {
-                            deadlineStr = deadline.toLocaleDateString();
-                            isOverdue = deadline < new Date();
-                          }
-                        }
-                      } catch (e) {
-                        console.error('Error parsing deadline:', e);
-                      }
-                      return (
-                        <div key={task?.asset_id || index} className={`p-4 border rounded-xl ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-                          <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
-                          {client && (
-                            <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
-                          )}
-                          {deadlineStr && (
-                            <p className={`text-xs font-medium mb-2 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-                              <Clock className="w-3 h-3 inline mr-1" />
-                              Due: {deadlineStr}
-                              {isOverdue && ' (Overdue)'}
-                            </p>
-                          )}
-                          <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-bold ${task?.status === ASSET_STATUS.TO_EDIT ? 'bg-yellow-100 text-yellow-700' : task?.status === ASSET_STATUS.IN_PROGRESS ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                            {task?.status || 'Pending'}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                      <p className="text-sm">No upcoming tasks</p>
-                    </div>
-                  )}
-                </div>
+                    } catch (e) {
+                      // Silently handle date parsing errors
+                    }
+                    return (
+                      <div key={task?.asset_id || index} className={`p-4 border rounded-xl ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+                        <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
+                        {client && (
+                          <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
+                        )}
+                        {deadlineStr && (
+                          <p className={`text-xs font-medium mb-2 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                            <Clock className="w-3 h-3 inline mr-1" />
+                            Due: {deadlineStr}
+                            {isOverdue && ' (Overdue)'}
+                          </p>
+                        )}
+                        <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-bold ${task?.status === ASSET_STATUS.TO_EDIT ? 'bg-yellow-100 text-yellow-700' : task?.status === ASSET_STATUS.IN_PROGRESS ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {task?.status || 'Pending'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <p className="text-sm">No upcoming tasks</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </ModalPortal>
 
       {/* Edit Asset Modal */}
       {showEditModal && assetToEdit && (
@@ -760,7 +750,7 @@ export default function TasksPage() {
 
 function KanbanColumn({ title, assets, color, headerColor, onStartEditing, onFinishEditing, activeTimeLog, data, onEdit }) {
   return (
-    <div className={`glass-card ${color} p-4 min-w-[300px] md:min-w-0 flex flex-col h-full`}>
+    <Card glass className={`${color} p-4 min-w-[300px] md:min-w-0 flex flex-col h-full`}>
       <div className={`${headerColor} rounded-xl px-4 py-3 mb-4 flex items-center justify-between shadow-sm`}>
         <h3 className="font-bold text-sm md:text-base">{title}</h3>
         <span className="bg-white/80 px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm">
@@ -781,10 +771,7 @@ function KanbanColumn({ title, assets, color, headerColor, onStartEditing, onFin
                 isActive={isActive}
                 onStartEditing={onStartEditing}
                 onFinishEditing={onFinishEditing}
-                onEdit={(asset) => {
-                  setAssetToEdit(asset);
-                  setShowEditModal(true);
-                }}
+                onEdit={onEdit}
                 index={index}
               />
             );
@@ -804,7 +791,7 @@ function AssetCard({ asset, client, isActive, onStartEditing, onFinishEditing, o
 
   return (
     <div
-      className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all animate-fadeIn group relative overflow-hidden"
+      className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-[transform,opacity,colors,shadow] animate-fadeIn group relative overflow-hidden"
       style={{ animationDelay: `${index * 0.05}s` }}
     >
       {isActive && (
@@ -865,6 +852,6 @@ function AssetCard({ asset, client, isActive, onStartEditing, onFinishEditing, o
         </button>
       )}
       </div>
-    </div>
+    </Card>
   );
 }

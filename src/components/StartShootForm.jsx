@@ -1,73 +1,79 @@
-import { useState } from 'react';
-import { X, Camera, MapPin, FileText } from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { Camera, MapPin, FileText, X } from 'lucide-react';
 import { SHOOT_STATUS } from '../constants';
+import OverlayMount from './overlay/OverlayMount.jsx';
+import Modal from './primitives/Modal.jsx';
+import Button from './primitives/Button.jsx';
 
 export default function StartShootForm({ isOpen, onClose, onStart, shoots, user }) {
   const [selectedShoot, setSelectedShoot] = useState('');
   const [notes, setNotes] = useState('');
   const [location, setLocation] = useState('');
+  const overlayId = useId();
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedShoot('');
+      setNotes('');
+      setLocation('');
+    }
+  }, [isOpen]);
 
-  // Filter shoots for today that are scheduled
-  const today = new Date().toISOString().split('T')[0];
-  const availableShoots = shoots.filter(s => {
-    if (!s || !s.photographer_id || s.photographer_id !== user?.email) return false;
-    if (s.status !== SHOOT_STATUS.SCHEDULED) return false;
-    
-    // Handle date comparison - normalize dates to YYYY-MM-DD format
-    let shootDate = '';
-    if (s.date) {
-      try {
-        const dateObj = new Date(s.date);
-        if (!isNaN(dateObj.getTime())) {
-          shootDate = dateObj.toISOString().split('T')[0];
-        } else {
-          shootDate = s.date.split('T')[0]; // Handle if already in ISO format
+  const availableShoots = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return shoots.filter(s => {
+      if (!s || !s.photographer_id || s.photographer_id !== user?.email) return false;
+      if (s.status !== SHOOT_STATUS.SCHEDULED) return false;
+      let shootDate = '';
+      if (s.date) {
+        try {
+          const dateObj = new Date(s.date);
+          if (!Number.isNaN(dateObj.getTime())) {
+            shootDate = dateObj.toISOString().split('T')[0];
+          } else {
+            shootDate = s.date.split('T')[0];
+          }
+        } catch (e) {
+          shootDate = s.date.split('T')[0];
         }
-      } catch (e) {
-        shootDate = s.date.split('T')[0]; // Fallback
       }
-    }
-    
-    return shootDate === today;
-  });
-
-  const handleStart = () => {
-    if (!selectedShoot) {
-      alert('Please select a shoot');
-      return;
-    }
-    onStart({
-      shoot_id: selectedShoot,
-      notes,
-      location_name: location,
+      return shootDate === today;
     });
-    setSelectedShoot('');
-    setNotes('');
-    setLocation('');
-    onClose();
-  };
+  }, [shoots, user?.email]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 transition-opacity" onClick={onClose} style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} />
-      <div className="glass-card w-full max-w-md p-6 relative z-10 animate-fadeIn bg-white rounded-2xl max-h-[90vh] overflow-y-auto" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Camera className="w-5 h-5 text-primary" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Start Shoot</h3>
+  const renderOverlay = useCallback(({ close }) => {
+    const handleClose = () => {
+      close();
+      onClose?.();
+    };
+
+    const handleStart = () => {
+      if (!selectedShoot) return;
+      onStart({
+        shoot_id: selectedShoot,
+        notes,
+        location_name: location,
+      });
+      handleClose();
+    };
+
+    return (
+      <Modal
+        title="Start Shoot"
+        description="Log notes and confirm your location before beginning the shoot."
+        onClose={handleClose}
+        size="md"
+        footer={(
+          <div className="flex gap-3 justify-end">
+            <Button variant="secondary" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleStart} disabled={!selectedShoot}>
+              Start Shoot
+            </Button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
+        )}
+      >
         <div className="space-y-5">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -76,7 +82,7 @@ export default function StartShootForm({ isOpen, onClose, onStart, shoots, user 
             <select
               value={selectedShoot}
               onChange={(e) => setSelectedShoot(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
               required
             >
               <option value="">Choose a shoot...</option>
@@ -107,7 +113,7 @@ export default function StartShootForm({ isOpen, onClose, onStart, shoots, user 
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Office Building, Studio A, etc."
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
             />
             <p className="text-xs text-gray-500 mt-2 ml-1 font-medium">GPS will be captured automatically</p>
           </div>
@@ -122,27 +128,22 @@ export default function StartShootForm({ isOpen, onClose, onStart, shoots, user 
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Meeting client at office... Any special instructions..."
               rows={3}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow] resize-none"
             />
           </div>
         </div>
+      </Modal>
+    );
+  }, [availableShoots, location, notes, onClose, onStart, selectedShoot]);
 
-        <div className="flex gap-4 mt-8">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleStart}
-            disabled={!selectedShoot}
-            className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/30"
-          >
-            Start Shoot
-          </button>
-        </div>
-      </div>
-    </div>
+  return (
+    <OverlayMount
+      id={`start-shoot-${overlayId}`}
+      isOpen={isOpen}
+      type="modal"
+      blocking
+      priority={20}
+      render={renderOverlay}
+    />
   );
 }

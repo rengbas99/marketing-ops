@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useId } from 'react';
+import { Calendar as CalendarIcon, MapPin, PenSquare } from 'lucide-react';
 import { SHOOT_STATUS } from '../constants';
+import ModalPortal from './primitives/ModalPortal.jsx';
+import Button from './primitives/Button.jsx';
 
 export default function CreateShootModal({ onClose, onSubmit, clients, photographers }) {
     const [formData, setFormData] = useState({
@@ -11,6 +13,10 @@ export default function CreateShootModal({ onClose, onSubmit, clients, photograp
         location_name: '',
         notes: ''
     });
+
+    const modalId = useId();
+    const safeClients = Array.isArray(clients) ? clients : [];
+    const safePhotographers = Array.isArray(photographers) ? photographers : [];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -32,19 +38,18 @@ export default function CreateShootModal({ onClose, onSubmit, clients, photograp
     };
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="fixed inset-0" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={onClose} />
-            <div className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-10 bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-white">Create New Shoot</h2>
-                    <button onClick={onClose} className="text-white/60 hover:text-white">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
+        <ModalPortal
+            id={`create-shoot-${modalId}`}
+            isOpen
+            onClose={onClose}
+            title="Create New Shoot"
+            description="Capture the essentials before assigning your team."
+            size="lg"
+        >
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Shoot Name *
                         </label>
                         <input
@@ -53,102 +58,106 @@ export default function CreateShootModal({ onClose, onSubmit, clients, photograp
                             placeholder="e.g., X Hotel Promotions"
                             value={formData.shoot_name}
                             onChange={(e) => setFormData({ ...formData, shoot_name: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
                         />
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
-                            Client (Optional)
-                        </label>
-                        <select
-                            value={formData.client_id}
-                            onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
-                        >
-                            <option value="">No Client</option>
-                            {clients.map(c => (
-                                <option key={c.client_id} value={c.client_id} className="bg-gray-800">
-                                    {c.company_name}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Client (Optional)
+                            </label>
+                            <select
+                                value={formData.client_id}
+                                onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                            >
+                                <option value="">No Client</option>
+                                {safeClients.map(c => (
+                                    <option key={c.client_id} value={c.client_id}>
+                                        {c.company_name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Photographer (Optional)
+                            </label>
+                            <select
+                                value={formData.photographer_id}
+                                onChange={(e) => setFormData({ ...formData, photographer_id: e.target.value })}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                            >
+                                <option value="">Assign Later</option>
+                                {safePhotographers.map(p => (
+                                    <option key={p.email} value={p.email}>
+                                        {p.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
+                </div>
 
+                <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
-                            Photographer (Optional)
-                        </label>
-                        <select
-                            value={formData.photographer_id}
-                            onChange={(e) => setFormData({ ...formData, photographer_id: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
-                        >
-                            <option value="">Assign Later</option>
-                            {photographers.map(p => (
-                                <option key={p.email} value={p.email} className="bg-gray-800">
-                                    {p.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Date *
                         </label>
-                        <input
-                            type="date"
-                            required
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
-                        />
+                        <div className="relative">
+                            <CalendarIcon className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                                type="date"
+                                required
+                                value={formData.date}
+                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                            />
+                        </div>
                     </div>
-
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Location
                         </label>
-                        <input
-                            type="text"
-                            placeholder="e.g., Downtown Studio"
-                            value={formData.location_name}
-                            onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400"
-                        />
+                        <div className="relative">
+                            <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                                type="text"
+                                placeholder="e.g., Downtown Studio"
+                                value={formData.location_name}
+                                onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
+                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                            />
+                        </div>
                     </div>
+                </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
-                            Notes
-                        </label>
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Notes
+                    </label>
+                    <div className="relative">
+                        <PenSquare className="w-4 h-4 text-gray-400 absolute left-3 top-4" />
                         <textarea
                             placeholder="Additional details..."
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                            rows={3}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400"
+                            rows={4}
+                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
                         />
                     </div>
+                </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <button
-                            type="submit"
-                            className="flex-1 glass-button"
-                        >
-                            Create Shoot
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                <div className="flex flex-col gap-3 pt-4 sm:flex-row">
+                    <Button type="submit" className="flex-1 gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        Create Shoot
+                    </Button>
+                    <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
+                        Cancel
+                    </Button>
+                </div>
+            </form>
+        </ModalPortal>
     );
 }

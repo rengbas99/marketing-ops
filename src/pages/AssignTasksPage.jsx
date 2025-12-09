@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
+import ModalPortal from '../components/primitives/ModalPortal.jsx';
+import Card from '../components/primitives/Card.jsx';
 import { User, Calendar, FileText, CheckCircle, Clock, TrendingUp, Camera, MapPin, Link as LinkIcon, X, Plus } from 'lucide-react';
 import { COLLECTIONS, ROLES, SHOOT_STATUS, ASSET_STATUS } from '../constants';
 
@@ -313,7 +315,7 @@ export default function AssignTasksPage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Task Assignment</h1>
           <p className="text-gray-600">Assign shoots to photographers and create/assign tasks to editors</p>
@@ -329,10 +331,10 @@ export default function AssignTasksPage() {
           </button>
         </div>
         )}
-      </div>
+      </Card>
 
       {/* Unassigned Assets */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <FileText className="w-5 h-5 text-gray-500" />
@@ -354,7 +356,7 @@ export default function AssignTasksPage() {
               return (
                 <div
                   key={asset.asset_id || index}
-                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all"
+                  className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-[transform,opacity,colors,shadow]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -382,7 +384,7 @@ export default function AssignTasksPage() {
                     </div>
                     <button
                       onClick={() => setSelectedAsset(asset)}
-                      className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 hover:border-primary hover:text-primary transition-all whitespace-nowrap"
+                      className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 hover:border-primary hover:text-primary transition-[transform,opacity,colors,shadow] whitespace-nowrap"
                     >
                       Assign Editor
                     </button>
@@ -400,10 +402,10 @@ export default function AssignTasksPage() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Editor Workload Overview */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-blue-600" />
           Team Workload & Progress
@@ -422,7 +424,7 @@ export default function AssignTasksPage() {
             return (
               <div
                 key={editor.email || index}
-                className="p-4 rounded-xl border border-gray-100 bg-white/50 hover:bg-white hover:shadow-md transition-all"
+                className="p-4 rounded-xl border border-gray-100 bg-white/50 hover:bg-white hover:shadow-md transition-[transform,opacity,colors,shadow]"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -477,7 +479,7 @@ export default function AssignTasksPage() {
                           {asset.work_progress !== undefined && (
                             <div className="w-full bg-gray-100 rounded-full h-1">
                               <div
-                                className="bg-primary h-1 rounded-full transition-all"
+                                className="bg-primary h-1 rounded-full transition-[transform,opacity,colors,shadow]"
                                 style={{ width: `${asset.work_progress}%` }}
                               />
                             </div>
@@ -532,27 +534,23 @@ export default function AssignTasksPage() {
             );
           })}
         </div>
-      </div>
+      </Card>
 
-      {/* Assignment Modal */}
-      {selectedAsset && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={() => setSelectedAsset(null)}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Assign Task</h3>
-              <button
-                onClick={() => setSelectedAsset(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
+      <ModalPortal
+        id="assign-task-modal"
+        isOpen={Boolean(selectedAsset)}
+        onClose={() => {
+          setSelectedAsset(null);
+          setSelectedEditor('');
+          setDeadline('');
+          setFileLink('');
+        }}
+        title="Assign Task"
+        description={selectedAsset?.title}
+        size="md"
+      >
+        {selectedAsset ? (
+          <>
             <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Selected Asset</p>
               <p className="font-bold text-gray-900">{selectedAsset.title}</p>
@@ -571,7 +569,7 @@ export default function AssignTasksPage() {
                 <select
                   value={selectedEditor}
                   onChange={(e) => setSelectedEditor(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 >
                   <option value="">Select team member...</option>
                   {availableEditors.map(editor => {
@@ -595,7 +593,7 @@ export default function AssignTasksPage() {
                   onChange={(e) => setDeadline(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
                   required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
 
@@ -606,7 +604,7 @@ export default function AssignTasksPage() {
                   value={fileLink}
                   onChange={(e) => setFileLink(e.target.value)}
                   placeholder="https://drive.google.com/..."
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
             </div>
@@ -631,186 +629,156 @@ export default function AssignTasksPage() {
                 Assign Task
               </button>
             </div>
+          </>
+        ) : null}
+      </ModalPortal>
+
+      <ModalPortal
+        id="create-task"
+        isOpen={showCreateTask}
+        onClose={() => setShowCreateTask(false)}
+        title="Create New Task"
+        size="md"
+      >
+        <form onSubmit={handleCreateTask} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
+            <input
+              type="text"
+              value={newTask.title}
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              placeholder="e.g. Edit Product Photos"
+            />
           </div>
-        </div>
-      )}
 
-      {/* Create New Task Modal */}
-      {showCreateTask && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={() => setShowCreateTask(false)}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Create New Task</h3>
-              <button
-                onClick={() => setShowCreateTask(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Assign To *</label>
+            <select
+              value={newTask.assigned_to}
+              onChange={(e) => {
+                const user = users.find(u => u.email === e.target.value);
+                setNewTask({
+                  ...newTask,
+                  assigned_to: e.target.value,
+                  assigned_role: user ? user.role : ''
+                });
+              }}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            >
+              <option value="">Select team member...</option>
+              {allAvailableUsers.map(user => (
+                <option key={user.email} value={user.email}>
+                  {user.name} ({user.role})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {newTask.assigned_role === ROLES.CONTENT_CREATOR && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Task Type</label>
+              <select
+                value={newTask.task_type}
+                onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
               >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
+                <option value="content_creation">Content Creation</option>
+                <option value="posting">Posting</option>
+              </select>
             </div>
+          )}
 
-            <form onSubmit={handleCreateTask} className="space-y-4">
+          {newTask.task_type === 'posting' && (
+            <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
-                <input
-                  type="text"
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  placeholder="e.g. Edit Product Photos"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Assign To *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Channel</label>
                 <select
-                  value={newTask.assigned_to}
-                  onChange={(e) => {
-                    const user = users.find(u => u.email === e.target.value);
-                    setNewTask({
-                      ...newTask,
-                      assigned_to: e.target.value,
-                      assigned_role: user ? user.role : ''
-                    });
-                  }}
+                  value={newTask.channel}
+                  onChange={(e) => setNewTask({ ...newTask, channel: e.target.value })}
                   required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 >
-                  <option value="">Select team member...</option>
-                  {allAvailableUsers.map(user => (
-                    <option key={user.email} value={user.email}>
-                      {user.name} ({user.role})
-                    </option>
-                  ))}
+                  <option value="">Select Channel...</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="YouTube">YouTube</option>
                 </select>
               </div>
-
-              {newTask.assigned_role === ROLES.CONTENT_CREATOR && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Task Type</label>
-                  <select
-                    value={newTask.task_type}
-                    onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  >
-                    <option value="content_creation">Content Creation</option>
-                    <option value="posting">Posting</option>
-                  </select>
-                </div>
-              )}
-
-              {newTask.task_type === 'posting' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Channel</label>
-                    <select
-                      value={newTask.channel}
-                      onChange={(e) => setNewTask({ ...newTask, channel: e.target.value })}
-                      required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                    >
-                      <option value="">Select Channel...</option>
-                      <option value="Instagram">Instagram</option>
-                      <option value="Facebook">Facebook</option>
-                      <option value="TikTok">TikTok</option>
-                      <option value="LinkedIn">LinkedIn</option>
-                      <option value="YouTube">YouTube</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
-                    <input
-                      type="date"
-                      value={newTask.publish_date}
-                      onChange={(e) => setNewTask({ ...newTask, publish_date: e.target.value })}
-                      required
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                    />
-                  </div>
-                </>
-              )}
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Deadline *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
                 <input
                   type="date"
-                  value={newTask.deadline}
-                  onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-                  min={new Date().toISOString().split('T')[0]}
+                  value={newTask.publish_date}
+                  onChange={(e) => setNewTask({ ...newTask, publish_date: e.target.value })}
                   required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
+            </>
+          )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">File Link (Optional)</label>
-                <input
-                  type="url"
-                  value={newTask.fileLink}
-                  onChange={(e) => setNewTask({ ...newTask, fileLink: e.target.value })}
-                  placeholder="https://drive.google.com/..."
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateTask(false)}
-                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-3 text-white bg-green-600 rounded-xl font-bold hover:bg-green-700 transition-colors"
-                >
-                  Create Task
-                </button>
-              </div>
-            </form>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Deadline *</label>
+            <input
+              type="date"
+              value={newTask.deadline}
+              onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            />
           </div>
-        </div>
-      )}
 
-      {/* Assign Task to Editor Modal */}
-      {showAssignToEditor && editorToAssign && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={() => {
-              setShowAssignToEditor(false);
-              setEditorToAssign(null);
-              setSelectedAsset(null);
-              setDeadline('');
-              setFileLink('');
-            }}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Assign Task to {editorToAssign.name || editorToAssign.email}</h3>
-              <button
-                onClick={() => {
-                  setShowAssignToEditor(false);
-                  setEditorToAssign(null);
-                  setSelectedAsset(null);
-                  setDeadline('');
-                  setFileLink('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">File Link (Optional)</label>
+            <input
+              type="url"
+              value={newTask.fileLink}
+              onChange={(e) => setNewTask({ ...newTask, fileLink: e.target.value })}
+              placeholder="https://drive.google.com/..."
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            />
+          </div>
 
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowCreateTask(false)}
+              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-3 text-white bg-green-600 rounded-xl font-bold hover:bg-green-700 transition-colors"
+            >
+              Create Task
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
+
+      <ModalPortal
+        id="assign-task-editor"
+        isOpen={showAssignToEditor && Boolean(editorToAssign)}
+        onClose={() => {
+          setShowAssignToEditor(false);
+          setEditorToAssign(null);
+          setSelectedAsset(null);
+          setDeadline('');
+          setFileLink('');
+        }}
+        title={editorToAssign ? `Assign Task to ${editorToAssign.name || editorToAssign.email}` : 'Assign Task'}
+        size="md"
+      >
+        {editorToAssign ? (
+          <>
             <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Assigning To</p>
               <p className="font-bold text-gray-900">{editorToAssign.name || editorToAssign.email}</p>
@@ -825,7 +793,7 @@ export default function AssignTasksPage() {
                     const asset = unassignedAssets.find(a => a && a.asset_id === e.target.value);
                     setSelectedAsset(asset || null);
                   }}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 >
                   <option value="">Select an unassigned asset...</option>
                   {unassignedAssets.map(asset => {
@@ -862,7 +830,7 @@ export default function AssignTasksPage() {
                   onChange={(e) => setDeadline(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
                   required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
 
@@ -873,7 +841,7 @@ export default function AssignTasksPage() {
                   value={fileLink}
                   onChange={(e) => setFileLink(e.target.value)}
                   placeholder="https://drive.google.com/..."
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
             </div>
@@ -899,9 +867,9 @@ export default function AssignTasksPage() {
                 Assign Task
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        ) : null}
+      </ModalPortal>
     </div>
   );
 }

@@ -6,9 +6,12 @@ import { useToast } from '../../components/Toast';
 import BreakDialog from '../../components/BreakDialog';
 import BreakTimer from '../../components/BreakTimer';
 import PhotographerWorkWidget from '../../components/PhotographerWorkWidget';
-import { Camera, Clock, MapPin, Calendar, LogIn, LogOut, X, Coffee, CheckCircle, Plane } from 'lucide-react';
+import { Camera, Clock, MapPin, Calendar, LogIn, LogOut, Coffee, CheckCircle, Plane } from 'lucide-react';
 import { formatBreakDuration } from '../../utils/timeFormatting';
 import { COLLECTIONS, SHOOT_STATUS } from '../../constants';
+import Card from '../../components/primitives/Card.jsx';
+import Button from '../../components/primitives/Button.jsx';
+import ModalPortal from '../../components/primitives/ModalPortal.jsx';
 
 export default function PhotographerDashboard() {
   const navigate = useNavigate();
@@ -560,18 +563,20 @@ export default function PhotographerDashboard() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="border-l-4 border-primary">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
           Welcome back, <span className="text-gradient">{user?.name || 'Media'}</span>!
         </h1>
         <p className="text-gray-600">Manage your shoots and attendance</p>
-      </div>
+      </Card>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
+        <Card
+          as="button"
+          glass
           onClick={() => navigate('/dashboard/leave-requests')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+          className="flex items-center gap-4 group hover:bg-white text-left"
         >
           <div className="p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
             <Plane className="w-8 h-8 text-orange-600" />
@@ -580,12 +585,14 @@ export default function PhotographerDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Leave Requests</h3>
             <p className="text-sm text-gray-600">Request leave or view your requests</p>
           </div>
-        </button>
+        </Card>
       </div>
 
       {/* Clock In/Out Card */}
-      <div className={`glass-card p-6 transition-all duration-300 ${clockedIn ? 'border-green-500/50 bg-green-50/50' : ''
-        }`}>
+      <Card
+        glass
+        className={`transition-[transform,opacity,colors,shadow] duration-300 ${clockedIn ? 'border border-green-100 bg-green-50/60' : ''}`}
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
@@ -640,12 +647,13 @@ export default function PhotographerDashboard() {
                     <BreakTimer breakStart={activeBreak.break_start} breakType={activeBreak.break_type} />
                   </div>
                 </div>
-                <button
+                <Button
+                  variant="glass"
+                  className="px-4 py-2 text-orange-700"
                   onClick={handleEndBreak}
-                  className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-medium hover:bg-orange-200 transition-colors"
                 >
                   End Break
-                </button>
+                </Button>
               </div>
             )}
 
@@ -670,111 +678,105 @@ export default function PhotographerDashboard() {
 
             <div className="flex gap-3">
               {!activeBreak && (
-                <button
+                <Button
+                  variant="glass"
+                  className="flex-1 flex items-center justify-center gap-2 text-gray-700 hover:text-primary"
                   onClick={() => setShowBreakDialog(true)}
-                  className="flex-1 glass-button text-gray-700 hover:text-primary flex items-center justify-center gap-2"
                 >
                   <Coffee className="w-4 h-4" />
                   Take Break
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 onClick={handleClockOutClick}
                 disabled={isClockOutLoading}
-                className="flex-1 bg-red-50 text-red-600 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-50"
+                variant="destructive"
+                className="flex-1 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                    <LogOut className="w-4 h-4" />
-                    Clock Out
-              </button>
+                <LogOut className="w-4 h-4" />
+                Clock Out
+              </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <p className="text-gray-600">Select a shoot and clock in to start working</p>
-            <button
+            <Button
+              size="lg"
+              className="w-full shadow-lg shadow-primary/30 hover:scale-[1.02]"
               onClick={() => setShowShootSelector(true)}
-              className="w-full bg-primary text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all transform hover:scale-[1.02] flex items-center justify-center gap-3"
             >
               <LogIn className="w-6 h-6" />
               Clock In & Select Shoot
-            </button>
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Shoot Selector Modal */}
-      {showShootSelector && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={() => {
-              setShowShootSelector(false);
-              setSelectedShoot('');
-            }}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Select Shoot</h3>
-              <button
-                onClick={() => {
-                  setShowShootSelector(false);
-                  setSelectedShoot('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Available Shoots</label>
-              <select
-                value={selectedShoot}
-                onChange={(e) => setSelectedShoot(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              >
-                <option value="">General Shoot (No specific shoot)</option>
-                {assignedShoots
-                  .filter(s => s && s.status !== SHOOT_STATUS.COMPLETED)
-                  .map(shoot => {
-                    const client = clients.find(c => c && c.client_id === shoot.client_id);
-                    return (
-                      <option key={shoot.shoot_id} value={shoot.shoot_id}>
-                        {shoot.shoot_name} {client ? `- ${client.company_name}` : ''}
-                      </option>
-                    );
-                  })}
-              </select>
-              <p className="text-xs text-gray-500 mt-2">
-                Clock in for general work or select a specific shoot
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowShootSelector(false);
-                  setSelectedShoot('');
-                }}
-                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleClockIn}
-                disabled={isClockInLoading}
-                className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isClockInLoading ? 'Processing...' : 'Clock In'}
-              </button>
-            </div>
+      <ModalPortal
+        id="photographer-shoot-selector"
+        isOpen={showShootSelector}
+        onClose={() => {
+          setShowShootSelector(false);
+          setSelectedShoot('');
+        }}
+        title="Select Shoot"
+        description="Clock in for general work or attach time to a specific shoot."
+        size="md"
+        footer={({ close }) => (
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setSelectedShoot('');
+                close();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              disabled={isClockInLoading}
+              onClick={async () => {
+                await handleClockIn();
+                close();
+              }}
+            >
+              {isClockInLoading ? 'Processing…' : 'Clock In'}
+            </Button>
           </div>
+        )}
+      >
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700">
+            Available Shoots
+          </label>
+          <select
+            value={selectedShoot}
+            onChange={(e) => setSelectedShoot(e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+          >
+            <option value="">General Shoot (No specific shoot)</option>
+            {assignedShoots
+              .filter(s => s && s.status !== SHOOT_STATUS.COMPLETED)
+              .map(shoot => {
+                const client = clients.find(c => c && c.client_id === shoot.client_id);
+                return (
+                  <option key={shoot.shoot_id} value={shoot.shoot_id}>
+                    {shoot.shoot_name} {client ? `- ${client.company_name}` : ''}
+                  </option>
+                );
+              })}
+          </select>
+          <p className="text-xs text-gray-500">
+            Clock in for general work or select a specific shoot.
+          </p>
         </div>
-      )}
+      </ModalPortal>
 
       {/* Upcoming Shoots */}
-      <div className="glass-card p-6">
+      <Card glass>
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <Calendar className="w-5 h-5" />
           Upcoming Shoots
@@ -790,7 +792,7 @@ export default function PhotographerDashboard() {
                 return (
                   <div
                     key={shoot.shoot_id || index}
-                    className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all"
+                    className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-[transform,opacity,colors,shadow]"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -832,24 +834,24 @@ export default function PhotographerDashboard() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="glass-card p-4">
+        <Card glass className="p-4">
           <div className="text-3xl font-bold text-primary mb-1">
             {assignedShoots.length}
           </div>
           <div className="text-sm text-gray-600 font-medium">Assigned Shoots</div>
-        </div>
-        <div className="glass-card p-4">
+        </Card>
+        <Card glass className="p-4">
           <div className="text-3xl font-bold text-green-600 mb-1">
             {photographerAttendance.filter(
               a => a && a.photographer_email === user?.email && a.status === 'Completed'
             ).length}
           </div>
           <div className="text-sm text-gray-600 font-medium">Completed</div>
-        </div>
+        </Card>
       </div>
 
       {/* Break Dialog */}
@@ -859,76 +861,60 @@ export default function PhotographerDashboard() {
         onConfirm={handleTakeBreak}
       />
 
-      {/* Clock Out Report Modal */}
-      {showClockOutReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 transition-opacity z-[100]" 
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowClockOutReport(false);
-                setClockOutReport('');
-              }
-            }} 
-          />
-          <div className="w-full max-w-md relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              (Optional) Provide a brief summary of what you accomplished today before clocking out.
-            </p>
-            <textarea
-              value={clockOutReport}
-              onChange={(e) => setClockOutReport(e.target.value)}
-              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
-              rows="5"
-              autoFocus
+      <ModalPortal
+        id="photographer-clockout-report"
+        isOpen={showClockOutReport}
+        onClose={() => {
+          setShowClockOutReport(false);
+          setClockOutReport('');
+        }}
+        title="Daily Work Report"
+        description="(Optional) Provide a summary before clocking out."
+        size="md"
+        footer={({ close }) => (
+          <div className="flex gap-3">
+            <Button
+              className="flex-1 gap-2"
               disabled={isClockOutLoading}
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleClockOut(clockOutReport)}
-                disabled={isClockOutLoading}
-                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isClockOutLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="w-5 h-5" />
-                    Clock Out
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                disabled={isClockOutLoading}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
+              onClick={async () => {
+                await handleClockOut(clockOutReport);
+                close();
+              }}
+            >
+              {isClockOutLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  Clock Out
+                </>
+              )}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={isClockOutLoading}
+              onClick={() => {
+                setClockOutReport('');
+                close();
+              }}
+            >
+              Cancel
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      >
+        <textarea
+          value={clockOutReport}
+          onChange={(e) => setClockOutReport(e.target.value)}
+          placeholder="E.g., Completed 3 shoots, synced footage, updated notes..."
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow] resize-none"
+          rows="5"
+          disabled={isClockOutLoading}
+        />
+      </ModalPortal>
     </div>
   );
 }

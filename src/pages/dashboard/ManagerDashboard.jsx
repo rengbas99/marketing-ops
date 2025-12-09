@@ -1,16 +1,37 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../components/Toast';
 import ApprovalsList from '../../components/ApprovalsList';
-import { Users, Camera, Plane, FileEdit, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import ModalPortal from '../../components/primitives/ModalPortal.jsx';
+import Card from '../../components/primitives/Card.jsx';
+import Button from '../../components/primitives/Button.jsx';
+import AssignShootForm from '../../components/AssignShootForm.jsx';
+import { Users, Camera, Plane, FileEdit, TrendingUp, Clock, CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import { getRelativeTime } from '../../utils/dateUtils';
-import { COLLECTIONS, ASSET_STATUS, SHOOT_STATUS } from '../../constants';
+import { COLLECTIONS, ASSET_STATUS, SHOOT_STATUS, ROLES } from '../../constants';
 
 export default function ManagerDashboard() {
-  const { data, loading, startPolling, stopPolling, forceRefresh } = useData();
+  const { data, loading, startPolling, stopPolling, forceRefresh, addRow } = useData();
   const { user } = useAuth();
+  const { success, error } = useToast();
   const navigate = useNavigate();
+  const [showAssignTaskModal, setShowAssignTaskModal] = useState(false);
+  const [showAssignShootModal, setShowAssignShootModal] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    client_id: '',
+    shoot_id: '',
+    assigned_to: '',
+    assigned_role: '',
+    task_type: 'editing',
+    deadline: '',
+    fileLink: '',
+    status: ASSET_STATUS.TO_EDIT,
+    channel: '',
+    publish_date: '',
+  });
 
   useEffect(() => {
     startPolling('manager-dashboard', [
@@ -140,6 +161,109 @@ export default function ManagerDashboard() {
     }))
   ].sort((a, b) => b.sortTime - a.sortTime).slice(0, 10);
 
+  const allAvailableUsers = (Array.isArray(users) ? users : []).filter(
+    u => {
+      if (!u || !u.email) return false;
+      if (u.active === 'FALSE' || u.active === false) return false;
+      if (u.role === ROLES.MANAGER) return false;
+      if (u.role === ROLES.PHOTOGRAPHER) return false;
+      return u.role === ROLES.EDITOR || u.role === ROLES.CONTENT_CREATOR || u.role === ROLES.LEAD;
+    }
+  );
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!newTask.title || !newTask.assigned_to || !newTask.deadline) {
+      error('Please fill in all required fields (Title, Assign To, and Deadline)');
+      return;
+    }
+
+    try {
+      const assignedUser = users.find(u => u && u.email === newTask.assigned_to);
+      const taskData = {
+        asset_id: `AST-${Date.now()}`,
+        title: newTask.title,
+        shoot_id: newTask.shoot_id || '',
+        deadline: newTask.deadline,
+        status: newTask.status,
+        upload_folder_link: newTask.fileLink,
+        work_progress: 0,
+        created_at: new Date().toISOString(),
+      };
+
+      if (newTask.assigned_role === ROLES.PHOTOGRAPHER) {
+        taskData.assigned_photographer_email = newTask.assigned_to;
+        taskData.task_type = 'photography';
+      } else if (newTask.assigned_role === ROLES.CONTENT_CREATOR) {
+        taskData.assigned_creator_email = newTask.assigned_to;
+        taskData.task_type = newTask.task_type || 'content_creation';
+        if (newTask.task_type === 'posting') {
+          taskData.channel = newTask.channel;
+          taskData.publish_date = newTask.publish_date;
+        }
+      } else {
+        taskData.assigned_editor_email = newTask.assigned_to;
+        taskData.task_type = 'editing';
+      }
+
+      await addRow(COLLECTIONS.ASSETS, taskData);
+
+      if (newTask.task_type === 'posting' && newTask.publish_date && newTask.channel) {
+        await addRow(COLLECTIONS.CONTENT_CALENDAR, {
+          calendar_id: `CAL-${Date.now()}`,
+          asset_id: taskData.asset_id,
+          publish_date: newTask.publish_date,
+          publish_time: '',
+          channel: newTask.channel,
+          status: 'scheduled',
+          notes: `Posting task: ${newTask.title}`,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      await forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.CONTENT_CALENDAR]);
+      success(`Task created and assigned to ${assignedUser?.name || newTask.assigned_to}`);
+      setShowAssignTaskModal(false);
+      setNewTask({
+        title: '',
+        client_id: '',
+        shoot_id: '',
+        assigned_to: '',
+        assigned_role: '',
+        task_type: 'editing',
+        deadline: '',
+        fileLink: '',
+        status: ASSET_STATUS.TO_EDIT,
+        channel: '',
+        publish_date: '',
+      });
+    } catch (err) {
+      error(`Failed to create task: ${err.message}`);
+    }
+  };
+
+  const handleAssignShoot = async (shootData) => {
+    try {
+      const shoot = {
+        shoot_id: `SHOOT-${Date.now()}`,
+        shoot_name: shootData.shoot_name,
+        photographer_id: shootData.photographer_id,
+        client_id: shootData.client_id || '',
+        date: shootData.date,
+        location_name: shootData.location_name || '',
+        notes: shootData.notes || '',
+        status: SHOOT_STATUS.SCHEDULED,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await addRow(COLLECTIONS.SHOOTS, shoot);
+      await forceRefresh([COLLECTIONS.SHOOTS]);
+      success('Shoot assigned successfully');
+    } catch (err) {
+      error(`Failed to assign shoot: ${err.message}`);
+    }
+  };
+
   if (loading.all) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -151,18 +275,24 @@ export default function ManagerDashboard() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
           Welcome back, <span className="text-gradient">{user?.name || 'Manager'}</span>!
         </h1>
         <p className="text-gray-600">Here's what's happening with your team today.</p>
-      </div>
+      </Card>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate('/dashboard/shoots')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+        <Card
+          glass
+          as="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowAssignShootModal(true);
+          }}
+          className="p-6 flex items-center gap-4 group hover:bg-white/80 cursor-pointer"
         >
           <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
             <Camera className="w-8 h-8 text-primary" />
@@ -171,10 +301,16 @@ export default function ManagerDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Add Shoot</h3>
             <p className="text-sm text-gray-600">Assign new shoots to videographers</p>
           </div>
-        </button>
-        <button
-          onClick={() => navigate('/dashboard/assign-tasks?action=task')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+        </Card>
+        <Card
+          glass
+          as="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowAssignTaskModal(true);
+          }}
+          className="p-6 flex items-center gap-4 group hover:bg-white/80 cursor-pointer"
         >
           <div className="p-3 bg-secondary/10 rounded-xl group-hover:bg-secondary/20 transition-colors">
             <FileEdit className="w-8 h-8 text-secondary" />
@@ -183,7 +319,7 @@ export default function ManagerDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Assign Task</h3>
             <p className="text-sm text-gray-600">Create and assign tasks to editors</p>
           </div>
-        </button>
+        </Card>
       </div>
 
       {/* Stats Grid */}
@@ -228,7 +364,7 @@ export default function ManagerDashboard() {
         <div className="lg:col-span-2 space-y-8">
           {/* Assets Pending Review */}
           {assetsInReview.length > 0 && (
-            <div className="glass-card p-6">
+            <Card glass className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-purple-600" />
@@ -245,11 +381,11 @@ export default function ManagerDashboard() {
                 clients={clients}
                 onUpdate={() => forceRefresh([COLLECTIONS.ASSETS])}
               />
-            </div>
+            </Card>
           )}
 
           {/* Recent Activity Feed */}
-          <div className="glass-card p-6">
+          <Card glass className="p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h2>
             <div className="space-y-4">
               {recentActivities.length > 0 ? (
@@ -269,7 +405,7 @@ export default function ManagerDashboard() {
                 <div className="text-center py-8 text-gray-500">No recent activity</div>
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Right Column: Quick Links */}
@@ -311,10 +447,18 @@ export default function ManagerDashboard() {
 
 function StatCard({ icon: Icon, label, value, color, bg, route }) {
   const navigate = useNavigate();
+  const handleClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (route) {
+      navigate(route);
+    }
+  };
   return (
-    <div
-      onClick={() => route && navigate(route)}
-      className={`glass-card p-4 cursor-pointer hover:ring-2 ring-primary/20 ${route ? 'active:scale-95' : ''}`}
+    <Card
+      glass
+      onClick={handleClick}
+      className={`p-4 cursor-pointer hover:ring-2 ring-primary/20 ${route ? 'active:scale-95' : ''}`}
     >
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-lg ${bg}`}>
@@ -323,20 +467,22 @@ function StatCard({ icon: Icon, label, value, color, bg, route }) {
         <span className="text-2xl font-bold text-gray-900">{value}</span>
       </div>
       <p className="text-sm font-medium text-gray-500">{label}</p>
-    </div>
+    </Card>
   );
 }
 
 function QuickLink({ title, subtitle, icon: Icon, to, color }) {
   return (
-    <Link to={to} className="glass-card p-4 flex items-center gap-4 hover:bg-white/80 group">
-      <div className={`p-2 rounded-lg bg-gray-50 group-hover:bg-white transition-colors`}>
-        <Icon className={`w-5 h-5 ${color}`} />
-      </div>
-      <div>
-        <h4 className="font-semibold text-gray-900">{title}</h4>
-        <p className="text-xs text-gray-500">{subtitle}</p>
-      </div>
+    <Link to={to}>
+      <Card glass className="p-4 flex items-center gap-4 hover:bg-white/80 group">
+        <div className={`p-2 rounded-lg bg-gray-50 group-hover:bg-white transition-colors`}>
+          <Icon className={`w-5 h-5 ${color}`} />
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-900">{title}</h4>
+          <p className="text-xs text-gray-500">{subtitle}</p>
+        </div>
+      </Card>
     </Link>
   );
 }

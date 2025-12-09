@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
+import Card from '../components/primitives/Card.jsx';
 import { ArrowLeft, Calendar, Clock, Edit2, X, Save, User, TrendingUp } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES } from '../constants';
@@ -225,7 +226,7 @@ export default function UserAttendanceDetailPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="glass-card p-12 text-center">
+          <Card glass className="p-12 text-center">
             <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-700 mb-2">User Not Found</h3>
             <p className="text-gray-500 mb-4">The user you're looking for doesn't exist.</p>
@@ -235,7 +236,7 @@ export default function UserAttendanceDetailPage() {
             >
               Back to Attendance
             </button>
-          </div>
+          </Card>
         </div>
       </div>
     );
@@ -245,7 +246,7 @@ export default function UserAttendanceDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="glass-card p-6">
+        <Card glass className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <button
@@ -289,10 +290,10 @@ export default function UserAttendanceDetailPage() {
               <div className="text-2xl font-bold text-gray-900">{monthlyStats.daysWorked}</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Calendar View / Attendance List */}
-        <div className="glass-card p-6">
+        <Card glass className="p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <Calendar className="w-5 h-5" />
             Attendance History
@@ -437,7 +438,7 @@ export default function UserAttendanceDetailPage() {
               </table>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

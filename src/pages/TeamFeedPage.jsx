@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
+import Card from '../components/primitives/Card.jsx';
 import { MessageSquare, Heart, User, Send, Activity } from 'lucide-react';
 import { COLLECTIONS, ASSET_STATUS } from '../constants';
 
@@ -93,13 +94,13 @@ export default function TeamFeedPage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
           <Activity className="w-8 h-8 text-primary" />
           Team Feed
         </h1>
         <p className="text-gray-600">See what the team is working on</p>
-      </div>
+      </Card>
 
       <div className="space-y-6 max-w-3xl mx-auto">
         {feedAssets.length > 0 ? (
@@ -108,9 +109,10 @@ export default function TeamFeedPage() {
             const comments = data.Asset_Comments?.filter(c => c.asset_id === asset.asset_id) || [];
 
             return (
-              <div
+              <Card
+                glass
                 key={asset.asset_id || index}
-                className="glass-card p-6 animate-fadeIn"
+                className="p-6 animate-fadeIn"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 {/* Header */}
@@ -214,7 +216,7 @@ export default function TeamFeedPage() {
                       value={commentText[asset.asset_id] || ''}
                       onChange={(e) => setCommentText({ ...commentText, [asset.asset_id]: e.target.value })}
                       placeholder="Add a comment..."
-                      className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-sm font-medium"
+                      className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow] text-sm font-medium"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           handleAddComment(asset.asset_id);
@@ -230,7 +232,7 @@ export default function TeamFeedPage() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })
         ) : (

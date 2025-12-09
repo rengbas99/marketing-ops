@@ -126,7 +126,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                 {onBack && (
                     <button
                         onClick={onBack}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
                         title="Back"
                     >
                         <ArrowLeft className="w-4 h-4" />
@@ -168,7 +168,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                             {!isPaused ? (
                                 <button
                                     onClick={handlePause}
-                                    className="flex items-center gap-2 px-4 py-2 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg text-yellow-700 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg text-yellow-700"
                                 >
                                     <Pause className="w-4 h-4" />
                                     Pause
@@ -176,7 +176,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                             ) : (
                                 <button
                                     onClick={handleResume}
-                                    className="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg text-green-700 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg text-green-700"
                                 >
                                     <Play className="w-4 h-4" />
                                     Resume
@@ -184,7 +184,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                             )}
                             <button
                                 onClick={handleEndSubtask}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-600 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-600"
                             >
                                 <Square className="w-4 h-4" />
                                 Complete
@@ -198,7 +198,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                         <>
                             <button
                                 onClick={() => setShowInput(true)}
-                                className="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                                className="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark flex items-center justify-center gap-2"
                             >
                                 <Play className="w-4 h-4" />
                                 Start New Subtask
@@ -211,7 +211,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                                         <button
                                             key={task}
                                             onClick={() => handleStartSubtask(task)}
-                                            className="px-3 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm transition-colors text-left font-medium"
+                                            className="px-3 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm text-left font-medium"
                                         >
                                             {task}
                                         </button>
@@ -233,7 +233,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => handleStartSubtask()}
-                                    className="flex-1 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors"
+                                    className="flex-1 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark"
                                 >
                                     Start
                                 </button>
@@ -242,7 +242,7 @@ export default function EditorSubtaskWidget({ asset, timeLog, onUpdateTimeLog, o
                                         setShowInput(false);
                                         setNewSubtask('');
                                     }}
-                                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors font-medium"
+                                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium"
                                 >
                                     Cancel
                                 </button>
