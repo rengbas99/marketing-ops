@@ -56,11 +56,12 @@ export const ClientPropType = PropTypes.shape({
 // Attendance PropType
 export const AttendancePropType = PropTypes.shape({
     attendance_id: PropTypes.string.isRequired,
-    employee_email: PropTypes.string.isRequired,
+    employee_email: PropTypes.string, // Optional - some records use employee_id
+    employee_id: PropTypes.string, // Optional - some records use employee_email
     date: PropTypes.string.isRequired,
     clock_in: PropTypes.string,
     clock_out: PropTypes.string,
-    status: PropTypes.oneOf(['present', 'absent', 'on_leave']),
+    status: PropTypes.oneOf(['present', 'absent', 'on_leave', 'clocked_in', 'clocked_out']),
 });
 
 // Break PropType

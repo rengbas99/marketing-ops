@@ -4,6 +4,7 @@ import { DataProvider } from './contexts/DataContext';
 import { ToastProvider } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import DashboardLayout from './components/DashboardLayout';
+import { OverlayProvider } from './components/overlay/OverlayManager.jsx';
 import LoginPage from './pages/LoginPage';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import LeadDashboard from './pages/dashboard/LeadDashboard';
@@ -64,10 +65,11 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <AuthProvider>
-          <DataProvider>
-            <Router>
+      <OverlayProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <DataProvider>
+              <Router>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<LoginPage />} />
@@ -149,10 +151,11 @@ function App() {
                 {/* Catch all - redirect to login */}
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
-            </Router>
-          </DataProvider>
-        </AuthProvider>
-      </ToastProvider>
+              </Router>
+            </DataProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </OverlayProvider>
     </ErrorBoundary>
   );
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import OverlayMount from './overlay/OverlayMount.jsx';
+import Card from './primitives/Card.jsx';
 import {
   LayoutDashboard,
   Users,
@@ -100,22 +102,26 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 glass-panel z-50 p-4 flex items-center justify-between">
+      <Card glass className="lg:hidden fixed top-0 left-0 right-0 z-50 p-4 flex items-center justify-between rounded-none">
         <h1 className="text-lg font-bold text-gradient">Reform Media</h1>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100"
         >
           {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
-      </div>
+      </Card>
 
       {/* Sidebar */}
-      <aside className={`
-        fixed lg:sticky top-0 left-0 h-screen w-72 glass-panel border-r border-white/20 z-40 
-        transform transition-transform duration-300 ease-in-out flex flex-col
+      <Card
+        glass
+        as="aside"
+        className={`
+        fixed lg:sticky top-0 left-0 h-screen w-72 border-r border-white/20 z-40 
+        transform transition-transform duration-300 ease-in-out flex flex-col rounded-none
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+      `}
+      >
         {/* Logo */}
         <div className="h-20 flex items-center px-8 border-b border-gray-100/50">
           <div className="w-8 h-8 bg-primary rounded-lg mr-3 flex items-center justify-center">
@@ -142,7 +148,7 @@ export default function DashboardLayout({ children }) {
                       to={item.path}
                       onClick={() => setSidebarOpen(false)}
                       className={`
-                        flex items-center px-4 py-3 rounded-xl transition-all duration-200 group
+                        flex items-center px-4 py-3 rounded-xl transition-colors duration-200 group
                         ${isActive
                           ? 'bg-primary text-white shadow-lg shadow-primary/30'
                           : 'text-gray-600 hover:bg-white hover:text-primary'
@@ -173,21 +179,31 @@ export default function DashboardLayout({ children }) {
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+            className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </button>
         </div>
-      </aside>
+      </Card>
 
-      {/* Mobile Overlay */}
-      {sidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-30"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <OverlayMount
+        id="dashboard-sidebar-overlay"
+        isOpen={sidebarOpen}
+        blocking={false}
+        pointerEvents="auto"
+        priority={5}
+        type="drawer"
+        render={({ close }) => (
+          <div
+            className="lg:hidden absolute inset-0 bg-black/20 backdrop-blur-sm"
+            onClick={() => {
+              setSidebarOpen(false);
+              close();
+            }}
+          />
+        )}
+      />
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 lg:pt-0 pt-16">

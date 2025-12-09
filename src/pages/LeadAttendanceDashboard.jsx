@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import Card from '../components/primitives/Card.jsx';
 import { Clock, User, CheckCircle, XCircle, Calendar, TrendingUp, ArrowRight, FileText, Eye } from 'lucide-react';
 import { COLLECTIONS, ROLES } from '../constants';
 import { formatBreakDuration } from '../utils/timeFormatting';
@@ -272,7 +273,7 @@ export default function LeadAttendanceDashboard() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-6">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Daily Team Status</h1>
           <p className="text-gray-600">Monitor team attendance and work status in real-time</p>
@@ -300,11 +301,11 @@ export default function LeadAttendanceDashboard() {
             View Reports
           </button>
         </div>
-      </div>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass-card p-6 border-l-4 border-green-500">
+        <Card glass className="p-6 border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Currently Working</p>
@@ -314,8 +315,8 @@ export default function LeadAttendanceDashboard() {
               <Clock className="w-6 h-6 text-green-600" />
             </div>
           </div>
-        </div>
-        <div className="glass-card p-6 border-l-4 border-gray-400">
+        </Card>
+        <Card glass className="p-6 border-l-4 border-gray-400">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Finished Today</p>
@@ -325,8 +326,8 @@ export default function LeadAttendanceDashboard() {
               <CheckCircle className="w-6 h-6 text-gray-600" />
             </div>
           </div>
-        </div>
-        <div className="glass-card p-6 border-l-4 border-orange-400">
+        </Card>
+        <Card glass className="p-6 border-l-4 border-orange-400">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Not Clocked In</p>
@@ -336,11 +337,11 @@ export default function LeadAttendanceDashboard() {
               <XCircle className="w-6 h-6 text-orange-600" />
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* CLOCKED IN Section */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
@@ -366,7 +367,7 @@ export default function LeadAttendanceDashboard() {
               <div
                 key={member.email}
                 onClick={() => handleViewDetails(member.email)}
-                className="p-4 bg-green-50 border-2 border-green-200 rounded-xl hover:border-green-300 hover:shadow-md transition-all cursor-pointer group"
+                className="p-4 bg-green-50 border-2 border-green-200 rounded-xl hover:border-green-300 hover:shadow-md transition-[transform,opacity,colors,shadow] cursor-pointer group"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -406,10 +407,10 @@ export default function LeadAttendanceDashboard() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* CLOCKED OUT Section */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <CheckCircle className="w-5 h-5 text-gray-600" />
@@ -435,7 +436,7 @@ export default function LeadAttendanceDashboard() {
               <div
                 key={member.email}
                 onClick={() => handleViewDetails(member.email)}
-                className="p-4 bg-gray-50 border-2 border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-all cursor-pointer group"
+                className="p-4 bg-gray-50 border-2 border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-md transition-[transform,opacity,colors,shadow] cursor-pointer group"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -479,11 +480,11 @@ export default function LeadAttendanceDashboard() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Not Clocked In Section */}
       {notClockedIn.length > 0 && (
-        <div className="glass-card p-6">
+        <Card glass className="p-6">
           <div className="flex items-center gap-3 mb-6">
             <XCircle className="w-5 h-5 text-orange-600" />
             <h2 className="text-xl font-bold text-gray-900">Not Clocked In ({notClockedIn.length})</h2>
@@ -493,7 +494,7 @@ export default function LeadAttendanceDashboard() {
               <div
                 key={member.email}
                 onClick={() => handleViewDetails(member.email)}
-                className="p-4 bg-orange-50 border-2 border-orange-200 rounded-xl hover:border-orange-300 hover:shadow-md transition-all cursor-pointer group"
+                className="p-4 bg-orange-50 border-2 border-orange-200 rounded-xl hover:border-orange-300 hover:shadow-md transition-[transform,opacity,colors,shadow] cursor-pointer group"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -510,7 +511,7 @@ export default function LeadAttendanceDashboard() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

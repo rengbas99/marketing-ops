@@ -3,6 +3,8 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ModalPortal from '../components/primitives/ModalPortal.jsx';
+import Card from '../components/primitives/Card.jsx';
 import { Calendar, Clock, Plus, Edit2, X, Check, FileText, Filter, Eye, AlertCircle, CheckCircle, Users, ChevronLeft, ChevronRight, Grid, List } from 'lucide-react';
 import { Calendar as BigCalendar, dateFnsLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -293,25 +295,16 @@ export default function CalendarPage() {
         type="danger"
       />
 
-      {/* Quick Status Update Modal */}
-      {showStatusUpdate && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={() => setShowStatusUpdate(null)}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Update Status</h3>
-              <button
-                onClick={() => setShowStatusUpdate(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
+      <ModalPortal
+        id="calendar-status-update"
+        isOpen={Boolean(showStatusUpdate)}
+        onClose={() => setShowStatusUpdate(null)}
+        title="Update Status"
+        description={showStatusUpdate ? (showStatusUpdate.title || 'Content') : undefined}
+        size="md"
+      >
+        {showStatusUpdate ? (
+          <>
             <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
               <p className="font-bold text-gray-900 mb-1">{showStatusUpdate.title || 'Content'}</p>
               <p className="text-xs text-gray-500 uppercase tracking-wider">
@@ -365,148 +358,137 @@ export default function CalendarPage() {
                 </button>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        ) : null}
+      </ModalPortal>
 
-      {/* Asset Details Modal */}
-      {selectedEntry && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }}
-            onClick={() => setSelectedEntry(null)}
-          />
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 relative z-10 animate-fadeIn overflow-y-auto max-h-[90vh]" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">Asset Details</h3>
-              <button
-                onClick={() => setSelectedEntry(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div className={`p-4 rounded-xl border flex items-center gap-3 ${selectedEntry.isCompleted
-                  ? 'bg-green-50 border-green-100 text-green-800'
-                  : selectedEntry.isOverdue
-                    ? 'bg-red-50 border-red-100 text-red-800'
-                    : 'bg-yellow-50 border-yellow-100 text-yellow-800'
-                }`}>
-                {selectedEntry.isCompleted ? <CheckCircle className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
-                <div>
-                  <p className="font-bold text-lg">
-                    {selectedEntry.isCompleted ? 'Asset Completed' : selectedEntry.isOverdue ? 'Overdue' : 'In Progress'}
-                  </p>
-                  <p className="text-sm opacity-80">
-                    {selectedEntry.isCompleted
-                      ? 'This asset has been finalized.'
-                      : selectedEntry.isOverdue
-                        ? 'This asset is past its deadline.'
-                        : 'This asset is currently being worked on.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Asset Title</label>
-                  <p className="text-lg font-bold text-gray-900">{selectedEntry.asset?.title || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status</label>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${selectedEntry.asset?.status === ASSET_STATUS.REVIEW ? 'bg-purple-100 text-purple-700' :
-                      selectedEntry.asset?.status === ASSET_STATUS.IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-700'
-                    }`}>
-                    {selectedEntry.asset?.status || 'In Progress'}
-                  </span>
-                </div>
-                {selectedEntry.client && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Client</label>
-                    <p className="font-medium text-primary">{selectedEntry.client.company_name}</p>
-                  </div>
-                )}
-                {selectedEntry.asset?.deadline && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Deadline</label>
-                    <p className={`font-medium ${selectedEntry.isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
-                      {new Date(selectedEntry.asset.deadline).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {selectedEntry.asset?.upload_folder_link && (
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Work Files</label>
-                  <a
-                    href={selectedEntry.asset.upload_folder_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline font-medium inline-flex items-center gap-2"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Open File Folder
-                  </a>
-                </div>
-              )}
-
-              {selectedEntry.asset?.work_progress !== undefined && (
-                <div>
-                  <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="font-bold text-gray-700">Progress</span>
-                    <span className="font-bold text-primary">{selectedEntry.asset.work_progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-primary h-full rounded-full transition-all duration-500"
-                      style={{ width: `${selectedEntry.asset.work_progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-6 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-6 mb-4">
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Publish Date</label>
-                    <p className="font-bold text-gray-900 mt-1">{selectedEntry.date.toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Channel</label>
-                    <p className="font-bold text-gray-900 mt-1">{selectedEntry.channel || 'N/A'}</p>
-                  </div>
-                </div>
-                {selectedEntry.notes && (
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Notes</label>
-                    <p className="text-gray-600 mt-1 italic bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                      {selectedEntry.notes}
-                    </p>
-                  </div>
-                )}
+      <ModalPortal
+        id="calendar-entry-details"
+        isOpen={Boolean(selectedEntry)}
+        onClose={() => setSelectedEntry(null)}
+        title="Asset Details"
+        description={selectedEntry?.asset?.title || selectedEntry?.title || undefined}
+        size="lg"
+      >
+        {selectedEntry ? (
+          <div className="space-y-6">
+            <div className={`p-4 rounded-xl border flex items-center gap-3 ${selectedEntry.isCompleted
+                ? 'bg-green-50 border-green-100 text-green-800'
+                : selectedEntry.isOverdue
+                  ? 'bg-red-50 border-red-100 text-red-800'
+                  : 'bg-yellow-50 border-yellow-100 text-yellow-800'
+              }`}>
+              {selectedEntry.isCompleted ? <CheckCircle className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+              <div>
+                <p className="font-bold text-lg">
+                  {selectedEntry.isCompleted ? 'Asset Completed' : selectedEntry.isOverdue ? 'Overdue' : 'In Progress'}
+                </p>
+                <p className="text-sm opacity-80">
+                  {selectedEntry.isCompleted
+                    ? 'This asset has been finalized.'
+                    : selectedEntry.isOverdue
+                      ? 'This asset is past its deadline.'
+                      : 'This asset is currently being worked on.'}
+                </p>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Asset Title</label>
+                <p className="text-lg font-bold text-gray-900">{selectedEntry.asset?.title || 'N/A'}</p>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status</label>
+                <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${selectedEntry.asset?.status === ASSET_STATUS.REVIEW ? 'bg-purple-100 text-purple-700' :
+                    selectedEntry.asset?.status === ASSET_STATUS.IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
+                      'bg-gray-100 text-gray-700'
+                  }`}>
+                  {selectedEntry.asset?.status || 'In Progress'}
+                </span>
+              </div>
+              {selectedEntry.client && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Client</label>
+                  <p className="font-medium text-primary">{selectedEntry.client.company_name}</p>
+                </div>
+              )}
+              {selectedEntry.asset?.deadline && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Deadline</label>
+                  <p className={`font-medium ${selectedEntry.isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+                    {new Date(selectedEntry.asset.deadline).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {selectedEntry.asset?.upload_folder_link && (
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Work Files</label>
+                <a
+                  href={selectedEntry.asset.upload_folder_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline font-medium inline-flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Open File Folder
+                </a>
+              </div>
+            )}
+
+            {selectedEntry.asset?.work_progress !== undefined && (
+              <div>
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="font-bold text-gray-700">Progress</span>
+                  <span className="font-bold text-primary">{selectedEntry.asset.work_progress}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-primary h-full rounded-full transition-[transform,opacity,colors,shadow] duration-500"
+                    style={{ width: `${selectedEntry.asset.work_progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="pt-6 border-t border-gray-100">
+              <div className="grid grid-cols-2 gap-6 mb-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Publish Date</label>
+                  <p className="font-bold text-gray-900 mt-1">{selectedEntry.date.toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Channel</label>
+                  <p className="font-bold text-gray-900 mt-1">{selectedEntry.channel || 'N/A'}</p>
+                </div>
+              </div>
+              {selectedEntry.notes && (
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Notes</label>
+                  <p className="text-gray-600 mt-1 italic bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                    {selectedEntry.notes}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </ModalPortal>
 
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Content Calendar</h1>
           <p className="text-gray-600">Upcoming publishing schedule and deliverables</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* Calendar/List View Toggle */}
-          <div className="glass-panel p-1 flex gap-1">
+          <Card glass className="p-1 flex gap-1">
             <button
               onClick={() => setCalendarView('list')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${calendarView === 'list' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] flex items-center gap-2 ${calendarView === 'list' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
                 }`}
             >
               <List className="w-4 h-4" />
@@ -514,22 +496,22 @@ export default function CalendarPage() {
             </button>
             <button
               onClick={() => setCalendarView('calendar')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${calendarView === 'calendar' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] flex items-center gap-2 ${calendarView === 'calendar' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
                 }`}
             >
               <Grid className="w-4 h-4" />
               Calendar
             </button>
-          </div>
+          </Card>
 
           {/* View Mode Toggle */}
-          <div className="glass-panel p-1 flex gap-1">
+          <Card glass className="p-1 flex gap-1">
             <button
               onClick={() => {
                 setViewMode('all');
                 setSelectedClient('');
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'all' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'all' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
                 }`}
             >
               All
@@ -537,7 +519,7 @@ export default function CalendarPage() {
             {(isEditor || isContentCreator) && (
               <button
                 onClick={() => setViewMode('personal')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'personal' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'personal' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
                   }`}
               >
                 My Tasks
@@ -545,12 +527,12 @@ export default function CalendarPage() {
             )}
             <button
               onClick={() => setViewMode('client')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'client' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-[transform,opacity,colors,shadow] ${viewMode === 'client' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'
                 }`}
             >
               By Client
             </button>
-          </div>
+          </Card>
 
           {/* Client Filter */}
           {viewMode === 'client' && (
@@ -571,18 +553,18 @@ export default function CalendarPage() {
           {canAddEntry && (
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-5 py-3 rounded-2xl bg-primary text-white font-bold shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all flex items-center gap-2 hover:-translate-y-0.5"
+              className="px-5 py-3 rounded-2xl bg-primary text-white font-bold shadow-lg shadow-primary/30 hover:bg-primary-dark transition-[transform,opacity,colors,shadow] flex items-center gap-2 hover:-translate-y-0.5"
             >
               <Plus className="w-4 h-4" />
               <span>Add Entry</span>
             </button>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Add Calendar Entry Form */}
       {canAddEntry && showAddForm && (
-        <div className="glass-card p-6 animate-fadeIn">
+        <Card glass className="p-6 animate-fadeIn">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Add Calendar Entry</h2>
           <form onSubmit={handleAddEntry} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -592,7 +574,7 @@ export default function CalendarPage() {
                   required
                   value={newEntry.asset_id}
                   onChange={(e) => setNewEntry({ ...newEntry, asset_id: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 >
                   <option value="">Select Asset/Deliverable</option>
                   {availableAssets.length > 0 ? (
@@ -621,7 +603,7 @@ export default function CalendarPage() {
                   value={newEntry.publish_date}
                   onChange={(e) => setNewEntry({ ...newEntry, publish_date: e.target.value })}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
             </div>
@@ -632,7 +614,7 @@ export default function CalendarPage() {
                   type="time"
                   value={newEntry.publish_time}
                   onChange={(e) => setNewEntry({ ...newEntry, publish_time: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 />
               </div>
               <div>
@@ -641,7 +623,7 @@ export default function CalendarPage() {
                   required
                   value={newEntry.channel}
                   onChange={(e) => setNewEntry({ ...newEntry, channel: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 >
                   <option value="">Select Channel</option>
                   <option value="Instagram">Instagram</option>
@@ -659,7 +641,7 @@ export default function CalendarPage() {
               <select
                 value={newEntry.status}
                 onChange={(e) => setNewEntry({ ...newEntry, status: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
               >
                 <option value="scheduled">Scheduled</option>
                 <option value="published">Published</option>
@@ -672,7 +654,7 @@ export default function CalendarPage() {
                 value={newEntry.notes}
                 onChange={(e) => setNewEntry({ ...newEntry, notes: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 placeholder="Additional notes or instructions..."
               />
             </div>
@@ -693,12 +675,12 @@ export default function CalendarPage() {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Calendar View */}
       {calendarView === 'calendar' && (
-        <div className="glass-card p-6">
+        <Card glass className="p-6">
           <div className="h-[700px]">
             <BigCalendar
               localizer={localizer}
@@ -737,7 +719,7 @@ export default function CalendarPage() {
               }}
             />
           </div>
-        </div>
+        </Card>
       )}
 
       {/* List View */}
@@ -750,7 +732,7 @@ export default function CalendarPage() {
             if (!events) return null;
 
             return (
-              <div key={dateKey} className="glass-card p-0 overflow-hidden">
+              <Card key={dateKey} glass className="p-0 overflow-hidden">
                 <div className="bg-gray-50/50 p-4 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-primary" />
@@ -834,15 +816,15 @@ export default function CalendarPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             );
           })}
 
           {Object.keys(eventsByDate).length === 0 && (
-            <div className="text-center py-12 text-gray-500 glass-card">
+            <Card glass className="text-center py-12 text-gray-500">
               <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
               <p>No upcoming content scheduled for the next 30 days</p>
-            </div>
+            </Card>
           )}
         </div>
       )}

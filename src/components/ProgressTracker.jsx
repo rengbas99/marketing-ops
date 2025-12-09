@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Card from './primitives/Card.jsx';
 import { TrendingUp, CheckCircle } from 'lucide-react';
 
 export default function ProgressTracker({ currentProgress = 0, onUpdate, assetTitle, readOnly = false }) {
@@ -36,7 +37,7 @@ export default function ProgressTracker({ currentProgress = 0, onUpdate, assetTi
   };
 
   return (
-    <div className="glass-card p-4">
+    <Card glass className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-gray-500" />
@@ -98,6 +99,6 @@ export default function ProgressTracker({ currentProgress = 0, onUpdate, assetTi
           <span className="text-xs text-green-700 font-bold uppercase tracking-wider">Task completed!</span>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

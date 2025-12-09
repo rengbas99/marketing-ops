@@ -5,6 +5,19 @@
 
 import { google } from 'googleapis';
 
+/**
+ * Convert column number to Excel column letter (1 = A, 27 = AA, etc.)
+ */
+function columnToLetter(col) {
+  let letter = '';
+  while (col > 0) {
+    let rem = (col - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    col = Math.floor((col - 1) / 26);
+  }
+  return letter;
+}
+
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -14,7 +27,7 @@ export default async function handler(req, res) {
   try {
     const { sheetName, rowIndex, rowData } = req.body;
 
-    if (!sheetName || !rowIndex || !rowData) {
+    if (!sheetName || rowIndex == null || !rowData) {
       return res.status(400).json({ error: 'Missing sheetName, rowIndex, or rowData' });
     }
 
@@ -49,7 +62,7 @@ export default async function handler(req, res) {
       headers = headerResponse.data.values?.[0] || [];
       // Clean headers (remove empty strings, trim whitespace)
       headers = headers.map(h => (h || '').trim()).filter(h => h.length > 0);
-    } catch (err) {
+    } catch {
       console.warn(`Could not fetch headers for ${sheetName}, will use rowData keys`);
       headers = Object.keys(rowData);
     }
@@ -66,7 +79,7 @@ export default async function handler(req, res) {
     // Map rowData to header order, with case-insensitive matching
     const values = headers.map((header, index) => {
       // Try exact match first
-      if (rowData.hasOwnProperty(header)) {
+      if (Object.prototype.hasOwnProperty.call(rowData, header)) {
         const value = rowData[header];
         if (value === null || value === undefined) return '';
         if (typeof value === 'object') return JSON.stringify(value);
@@ -88,7 +101,7 @@ export default async function handler(req, res) {
     });
 
     // Determine the range (A{rowIndex}:{lastColumn}{rowIndex})
-    const lastCol = headers.length > 0 ? String.fromCharCode(64 + Math.min(headers.length, 26)) : 'Z';
+    const lastCol = headers.length > 0 ? columnToLetter(headers.length) : 'Z';
     const range = `${sheetName}!A${rowIndex}:${lastCol}${rowIndex}`;
 
     // Update the row

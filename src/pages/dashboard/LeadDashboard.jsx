@@ -10,7 +10,10 @@ import SubTaskWidget from '../../components/SubTaskWidget';
 import UpdateShootModal from '../../components/UpdateShootModal';
 import UpdateAssetModal from '../../components/UpdateAssetModal';
 import AssetWorkDetailsModal from '../../components/AssetWorkDetailsModal';
-import { Users, Camera, FileEdit, Calendar, Plus, Clock, LogIn, LogOut, Coffee, FileText, MapPin, AlertCircle, Eye, Edit, Plane, X } from 'lucide-react';
+import ModalPortal from '../../components/primitives/ModalPortal.jsx';
+import Button from '../../components/primitives/Button.jsx';
+import Card from '../../components/primitives/Card.jsx';
+import { Users, Camera, FileEdit, Calendar, Plus, Clock, LogIn, LogOut, Coffee, FileText, MapPin, AlertCircle, Eye, Edit, Plane } from 'lucide-react';
 import { formatBreakDuration, formatTime as formatTimeUtil } from '../../utils/timeFormatting';
 import { COLLECTIONS, SHOOT_STATUS, ASSET_STATUS, ROLES } from '../../constants';
 import { shouldAutoClockOut, findStaleClockIns, canClockIn } from '../../utils/attendanceUtils';
@@ -36,6 +39,20 @@ export default function LeadDashboard() {
   const [showAssetModal, setShowAssetModal] = useState(false);
   const [showWorkDetails, setShowWorkDetails] = useState(false);
   const [selectedAssetForDetails, setSelectedAssetForDetails] = useState(null);
+  const [showAssignTaskModal, setShowAssignTaskModal] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    client_id: '',
+    shoot_id: '',
+    assigned_to: '',
+    assigned_role: '',
+    task_type: 'editing',
+    deadline: '',
+    fileLink: '',
+    status: ASSET_STATUS.TO_EDIT,
+    channel: '',
+    publish_date: '',
+  });
 
   useEffect(() => {
     startPolling('lead-dashboard', [
@@ -462,6 +479,119 @@ export default function LeadDashboard() {
     }
   };
 
+  const allAvailableUsers = (Array.isArray(users) ? users : []).filter(
+    u => {
+      if (!u || !u.email) return false;
+      if (u.active === 'FALSE' || u.active === false) return false;
+      if (u.role === ROLES.MANAGER) return false;
+      if (u.role === ROLES.PHOTOGRAPHER) return false;
+      return u.role === ROLES.EDITOR || u.role === ROLES.CONTENT_CREATOR || u.role === ROLES.LEAD;
+    }
+  );
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!newTask.title || !newTask.assigned_to || !newTask.deadline) {
+      error('Please fill in all required fields (Title, Assign To, and Deadline)');
+      return;
+    }
+
+    try {
+      const existingTask = assets.find(a => {
+        if (!a || !a.title) return false;
+        const titleMatch = a.title === newTask.title;
+        const assigneeMatch =
+          (newTask.assigned_role === ROLES.EDITOR && a.assigned_editor_email === newTask.assigned_to) ||
+          (newTask.assigned_role === ROLES.CONTENT_CREATOR && a.assigned_creator_email === newTask.assigned_to) ||
+          (newTask.assigned_role === ROLES.PHOTOGRAPHER && a.assigned_photographer_email === newTask.assigned_to);
+        const deadlineMatch = a.deadline === newTask.deadline;
+        const notCompleted = a.status !== ASSET_STATUS.COMPLETED && a.status !== 'Final';
+        return titleMatch && assigneeMatch && deadlineMatch && notCompleted;
+      });
+
+      if (existingTask) {
+        error('A task with the same title, assignee, and deadline already exists');
+        return;
+      }
+
+      const assignedUser = users.find(u => u && u.email === newTask.assigned_to);
+      const taskData = {
+        asset_id: `AST-${Date.now()}`,
+        title: newTask.title,
+        shoot_id: newTask.shoot_id || '',
+        deadline: newTask.deadline,
+        status: newTask.status,
+        upload_folder_link: newTask.fileLink,
+        work_progress: 0,
+        created_at: new Date().toISOString(),
+      };
+
+      if (newTask.assigned_role === ROLES.LEAD) {
+        if (newTask.task_type === 'photography') {
+          taskData.assigned_photographer_email = newTask.assigned_to;
+          taskData.task_type = 'photography';
+        } else if (newTask.task_type === 'posting' || newTask.task_type === 'content_creation') {
+          taskData.assigned_creator_email = newTask.assigned_to;
+          taskData.task_type = newTask.task_type;
+          if (newTask.task_type === 'posting') {
+            taskData.channel = newTask.channel;
+            taskData.publish_date = newTask.publish_date;
+          }
+        } else {
+          taskData.assigned_editor_email = newTask.assigned_to;
+          taskData.task_type = 'editing';
+        }
+      } else if (newTask.assigned_role === ROLES.PHOTOGRAPHER) {
+        taskData.assigned_photographer_email = newTask.assigned_to;
+        taskData.task_type = 'photography';
+      } else if (newTask.assigned_role === ROLES.CONTENT_CREATOR) {
+        taskData.assigned_creator_email = newTask.assigned_to;
+        taskData.task_type = newTask.task_type || 'content_creation';
+        if (newTask.task_type === 'posting') {
+          taskData.channel = newTask.channel;
+          taskData.publish_date = newTask.publish_date;
+        }
+      } else {
+        taskData.assigned_editor_email = newTask.assigned_to;
+        taskData.task_type = 'editing';
+      }
+
+      await addRow(COLLECTIONS.ASSETS, taskData);
+
+      if (newTask.task_type === 'posting' && newTask.publish_date && newTask.channel) {
+        await addRow(COLLECTIONS.CONTENT_CALENDAR, {
+          calendar_id: `CAL-${Date.now()}`,
+          asset_id: taskData.asset_id,
+          publish_date: newTask.publish_date,
+          publish_time: '',
+          channel: newTask.channel,
+          status: 'scheduled',
+          notes: `Posting task: ${newTask.title}`,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      await forceRefresh([COLLECTIONS.ASSETS, COLLECTIONS.CONTENT_CALENDAR]);
+      success(`Task created and assigned to ${assignedUser?.name || newTask.assigned_to}`);
+      setShowAssignTaskModal(false);
+      setNewTask({
+        title: '',
+        client_id: '',
+        shoot_id: '',
+        assigned_to: '',
+        assigned_role: '',
+        task_type: 'editing',
+        deadline: '',
+        fileLink: '',
+        status: ASSET_STATUS.TO_EDIT,
+        channel: '',
+        publish_date: '',
+      });
+    } catch (err) {
+      error('Error creating task: ' + err.message);
+    }
+  };
+
   const teamOnShoots = photographerAttendance
     .filter(a => a && (a.status === 'In Progress' || (!a.end_time && a.status !== 'Completed')))
     .map(attendance => {
@@ -570,16 +700,21 @@ export default function LeadDashboard() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="border-l-4 border-primary">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
           Welcome back, <span className="text-gradient">{user?.name || 'Lead'}</span>!
         </h1>
         <p className="text-gray-600">Manage clients and track team progress</p>
-      </div>
+      </Card>
 
       {/* Clock In/Out Card */}
-      <div className={`glass-card p-6 transition-all duration-300 ${clockedIn ? 'border-green-500/50 bg-green-50/50' : ''
-        }`}>
+      <Card
+        glass
+        className={`
+          transition-[transform,opacity,colors,shadow] duration-300
+          ${clockedIn ? 'border border-green-100 bg-green-50/60' : ''}
+        `}
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
@@ -630,29 +765,32 @@ export default function LeadDashboard() {
 
             <div className="flex gap-3">
               {!activeBreak && (
-                <button
+                <Button
+                  variant="glass"
                   onClick={() => setShowBreakDialog(true)}
-                  className="flex-1 glass-button text-gray-700 hover:text-primary flex items-center justify-center gap-2"
+                  className="flex-1 flex items-center justify-center gap-2"
                 >
                   <Coffee className="w-4 h-4" />
                   Take Break
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 onClick={handleClockOutClick}
                 disabled={isClockOutLoading}
-                className="flex-1 bg-red-50 text-red-600 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors disabled:opacity-50"
+                variant="destructive"
+                className="flex-1 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                    <LogOut className="w-4 h-4" />
-                    Clock Out
-              </button>
+                <LogOut className="w-4 h-4" />
+                Clock Out
+              </Button>
             </div>
           </div>
         ) : (
-          <button
+          <Button
             onClick={handleClockIn}
             disabled={isClockInLoading}
-            className="w-full bg-primary text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all transform hover:scale-[1.02] flex items-center justify-center gap-3 disabled:opacity-50"
+            size="lg"
+            className="w-full shadow-lg shadow-primary/30 hover:scale-[1.02] disabled:opacity-50"
           >
             {isClockInLoading ? 'Processing...' : (
               <>
@@ -660,15 +798,21 @@ export default function LeadDashboard() {
                 Start Work Day
               </>
             )}
-          </button>
+          </Button>
         )}
-      </div>
+      </Card>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate('/dashboard/shoots')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+        <Card
+          as="button"
+          glass
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate('/dashboard/assign-shoot');
+          }}
+          className="flex items-center gap-4 text-left group hover:bg-white"
         >
           <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
             <Camera className="w-8 h-8 text-primary" />
@@ -677,10 +821,16 @@ export default function LeadDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Add Shoot</h3>
             <p className="text-sm text-gray-600">Assign new shoots to videographers</p>
           </div>
-        </button>
-        <button
-          onClick={() => navigate('/dashboard/assign-tasks?action=task')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+        </Card>
+        <Card
+          as="button"
+          glass
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowAssignTaskModal(true);
+          }}
+          className="flex items-center gap-4 text-left group hover:bg-white"
         >
           <div className="p-3 bg-secondary/10 rounded-xl group-hover:bg-secondary/20 transition-colors">
             <FileEdit className="w-8 h-8 text-secondary" />
@@ -689,10 +839,12 @@ export default function LeadDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Assign Task</h3>
             <p className="text-sm text-gray-600">Create and assign tasks to editors</p>
           </div>
-        </button>
-        <button
+        </Card>
+        <Card
+          as="button"
+          glass
           onClick={() => navigate('/dashboard/leave-requests')}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80"
+          className="flex items-center gap-4 text-left group hover:bg-white"
         >
           <div className="p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
             <Plane className="w-8 h-8 text-orange-600" />
@@ -701,14 +853,16 @@ export default function LeadDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Leave Requests</h3>
             <p className="text-sm text-gray-600">Request leave or approve team requests</p>
           </div>
-        </button>
+        </Card>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div 
+        <Card
+          as="button"
+          glass
           onClick={() => navigate('/dashboard/attendance')}
-          className="glass-card p-4 md:p-6 cursor-pointer hover:shadow-lg transition-all group"
+          className="text-left hover:shadow-lg transition-[transform,opacity,colors,shadow] group"
         >
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <div className={`p-2 md:p-3 rounded-xl bg-green-50 group-hover:bg-green-100 transition-colors`}>
@@ -728,7 +882,7 @@ export default function LeadDashboard() {
             <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{activeAttendanceCount || 0}</div>
             <div className="text-xs md:text-sm text-gray-500 font-medium">Active Attendance</div>
           </div>
-        </div>
+        </Card>
         <StatCard
           icon={Users}
           label="Total Clients"
@@ -761,7 +915,7 @@ export default function LeadDashboard() {
         {(() => {
           const assetsInReview = assets.filter(a => a && a.status === ASSET_STATUS.REVIEW);
           return assetsInReview.length > 0 && (
-            <div className="glass-card p-6 lg:col-span-2">
+            <Card glass className="lg:col-span-2">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-purple-600" />
@@ -778,12 +932,12 @@ export default function LeadDashboard() {
                 clients={clients}
                 onUpdate={() => forceRefresh([COLLECTIONS.ASSETS])}
               />
-            </div>
+            </Card>
           );
         })()}
 
         {/* Team on Shoots */}
-        <div className="glass-card p-6">
+        <Card glass>
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <Camera className="w-5 h-5" />
             Active Shoots
@@ -828,10 +982,10 @@ export default function LeadDashboard() {
               <div className="text-center py-8 text-gray-500">No active shoots</div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Team Editing */}
-        <div className="glass-card p-6">
+        <Card glass>
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <FileEdit className="w-5 h-5" />
             Active Editing
@@ -903,7 +1057,7 @@ export default function LeadDashboard() {
               <div className="text-center py-8 text-gray-500">No active editing sessions</div>
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Break Dialog */}
@@ -957,75 +1111,193 @@ export default function LeadDashboard() {
       )}
 
       {/* Clock Out Report Modal */}
-      {showClockOutReport && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 transition-opacity" 
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowClockOutReport(false);
+      <ModalPortal
+        id="clock-out-report"
+        isOpen={showClockOutReport}
+        onClose={() => {
+          setShowClockOutReport(false);
+          setClockOutReport('');
+        }}
+        title="Daily Work Report"
+        description="Optionally summarize what you accomplished before clocking out."
+        size="md"
+        footer={({ close }) => (
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                close();
                 setClockOutReport('');
-              }
-            }} 
-          />
-          <div className="w-full max-w-md relative z-[10000] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              (Optional) Provide a brief summary of what you accomplished today before clocking out.
-            </p>
-            <textarea
-              value={clockOutReport}
-              onChange={(e) => setClockOutReport(e.target.value)}
-              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
-              rows="5"
-              autoFocus
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => handleClockOut(clockOutReport)}
               disabled={isClockOutLoading}
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleClockOut(clockOutReport)}
-                disabled={isClockOutLoading}
-                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isClockOutLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="w-5 h-5" />
-                    Clock Out
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                disabled={isClockOutLoading}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
+            >
+              {isClockOutLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Submit &amp; Clock Out
+                </>
+              )}
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          Provide a brief summary of what you accomplished today before clocking out.
+        </p>
+        <textarea
+          value={clockOutReport}
+          onChange={(e) => setClockOutReport(e.target.value)}
+          placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow] resize-none"
+          rows="5"
+          autoFocus
+          disabled={isClockOutLoading}
+        />
+      </ModalPortal>
+
+      {/* Create Task Modal */}
+      <ModalPortal
+        id="create-task-lead"
+        isOpen={showAssignTaskModal}
+        onClose={() => setShowAssignTaskModal(false)}
+        title="Create New Task"
+        size="md"
+      >
+        <form onSubmit={handleCreateTask} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
+            <input
+              type="text"
+              value={newTask.title}
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              placeholder="e.g. Edit Product Photos"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Assign To *</label>
+            <select
+              value={newTask.assigned_to}
+              onChange={(e) => {
+                const user = users.find(u => u.email === e.target.value);
+                setNewTask({
+                  ...newTask,
+                  assigned_to: e.target.value,
+                  assigned_role: user ? user.role : ''
+                });
+              }}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            >
+              <option value="">Select team member...</option>
+              {allAvailableUsers.map(user => (
+                <option key={user.email} value={user.email}>
+                  {user.name} ({user.role})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {newTask.assigned_role === ROLES.CONTENT_CREATOR && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Task Type</label>
+              <select
+                value={newTask.task_type}
+                onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              >
+                <option value="content_creation">Content Creation</option>
+                <option value="posting">Posting</option>
+              </select>
+            </div>
+          )}
+
+          {newTask.task_type === 'posting' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Channel</label>
+                <select
+                  value={newTask.channel}
+                  onChange={(e) => setNewTask({ ...newTask, channel: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+                >
+                  <option value="">Select Channel...</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="YouTube">YouTube</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
+                <input
+                  type="date"
+                  value={newTask.publish_date}
+                  onChange={(e) => setNewTask({ ...newTask, publish_date: e.target.value })}
+                  required
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Deadline *</label>
+            <input
+              type="date"
+              value={newTask.deadline}
+              onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">File Link (Optional)</label>
+            <input
+              type="url"
+              value={newTask.fileLink}
+              onChange={(e) => setNewTask({ ...newTask, fileLink: e.target.value })}
+              placeholder="https://drive.google.com/..."
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAssignTaskModal(false)}
+              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-3 text-white bg-green-600 rounded-xl font-bold hover:bg-green-700 transition-colors"
+            >
+              Create Task
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
     </div>
   );
 }
@@ -1033,9 +1305,11 @@ export default function LeadDashboard() {
 function StatCard({ icon: Icon, label, value, color, bg, route }) {
   const navigate = useNavigate();
   return (
-    <div
+    <Card
+      glass
+      as={route ? 'button' : 'div'}
       onClick={() => route && navigate(route)}
-      className={`glass-card p-4 cursor-pointer hover:ring-2 ring-primary/20 ${route ? 'active:scale-95' : ''}`}
+      className={`p-4 cursor-pointer hover:ring-2 ring-primary/20 ${route ? 'active:scale-95 text-left' : ''}`}
     >
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-lg ${bg}`}>
@@ -1044,6 +1318,6 @@ function StatCard({ icon: Icon, label, value, color, bg, route }) {
         <span className="text-2xl font-bold text-gray-900">{value}</span>
       </div>
       <p className="text-sm font-medium text-gray-500">{label}</p>
-    </div>
+    </Card>
   );
 }

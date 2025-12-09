@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useId } from 'react';
+import { Plus } from 'lucide-react';
 import { ASSET_STATUS } from '../constants';
+import ModalPortal from './primitives/ModalPortal.jsx';
+import Button from './primitives/Button.jsx';
 
 const DELIVERABLE_TYPES = [
     'Social Media Post',
@@ -34,6 +36,12 @@ export default function CreateAssetModal({ onClose, onSubmit, clients, shoots, e
         notes: ''
     });
 
+    const modalId = useId();
+    const safeClients = Array.isArray(clients) ? clients : [];
+    const safeShoots = Array.isArray(shoots) ? shoots : [];
+    const safeEditors = Array.isArray(editors) ? editors : [];
+    const safeCreators = Array.isArray(creators) ? creators : [];
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -59,19 +67,18 @@ export default function CreateAssetModal({ onClose, onSubmit, clients, shoots, e
     };
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="fixed inset-0" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={onClose} />
-            <div className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-10 bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-white">Create New Asset</h2>
-                    <button onClick={onClose} className="text-white/60 hover:text-white">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
+        <ModalPortal
+            id={`create-asset-${modalId}`}
+            isOpen
+            onClose={onClose}
+            title="Create New Asset"
+            description="Fill out the details below to assign a new deliverable."
+            size="lg"
+        >
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Asset Title *
                         </label>
                         <input
@@ -80,163 +87,161 @@ export default function CreateAssetModal({ onClose, onSubmit, clients, shoots, e
                             placeholder="e.g., X Hotel Instagram Post"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
                         />
                     </div>
 
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Deliverable Type *
+                            </label>
+                            <select
+                                required
+                                value={formData.deliverable_type}
+                                onChange={(e) => setFormData({ ...formData, deliverable_type: e.target.value })}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                            >
+                                <option value="">Select Type</option>
+                                {DELIVERABLE_TYPES.map(type => (
+                                    <option key={type} value={type}>
+                                        {type}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {formData.deliverable_type === 'Other' && (
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Custom Deliverable *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Specify deliverable type"
+                                    value={formData.custom_deliverable}
+                                    onChange={(e) => setFormData({ ...formData, custom_deliverable: e.target.value })}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
-                            Deliverable Type *
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Client (Optional)
                         </label>
                         <select
-                            required
-                            value={formData.deliverable_type}
-                            onChange={(e) => setFormData({ ...formData, deliverable_type: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
+                            value={formData.client_id}
+                            onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
                         >
-                            <option value="">Select Type</option>
-                            {DELIVERABLE_TYPES.map(type => (
-                                <option key={type} value={type} className="bg-gray-800">
-                                    {type}
+                            <option value="">No Client</option>
+                            {safeClients.map(c => (
+                                <option key={c.client_id} value={c.client_id}>
+                                    {c.company_name}
                                 </option>
                             ))}
                         </select>
                     </div>
 
-                    {formData.deliverable_type === 'Other' && (
-                        <div>
-                            <label className="block text-sm font-medium text-white/80 mb-2">
-                                Custom Deliverable Type *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Specify deliverable type"
-                                value={formData.custom_deliverable}
-                                onChange={(e) => setFormData({ ...formData, custom_deliverable: e.target.value })}
-                                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400"
-                            />
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-white/80 mb-2">
-                                Client (Optional)
-                            </label>
-                            <select
-                                value={formData.client_id}
-                                onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
-                            >
-                                <option value="">No Client</option>
-                                {clients.map(c => (
-                                    <option key={c.client_id} value={c.client_id} className="bg-gray-800">
-                                        {c.company_name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-white/80 mb-2">
-                                Shoot (Optional)
-                            </label>
-                            <select
-                                value={formData.shoot_id}
-                                onChange={(e) => setFormData({ ...formData, shoot_id: e.target.value })}
-                                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
-                            >
-                                <option value="">No Shoot</option>
-                                {shoots.map(s => (
-                                    <option key={s.shoot_id} value={s.shoot_id} className="bg-gray-800">
-                                        {s.shoot_name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Shoot (Optional)
+                        </label>
+                        <select
+                            value={formData.shoot_id}
+                            onChange={(e) => setFormData({ ...formData, shoot_id: e.target.value })}
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                        >
+                            <option value="">No Shoot</option>
+                            {safeShoots.map(s => (
+                                <option key={s.shoot_id} value={s.shoot_id}>
+                                    {s.shoot_name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-white/80 mb-2">
-                                Assign Editor
-                            </label>
-                            <select
-                                value={formData.assigned_editor_email}
-                                onChange={(e) => setFormData({ ...formData, assigned_editor_email: e.target.value })}
-                                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
-                            >
-                                <option value="">Assign Later</option>
-                                {editors.map(e => (
-                                    <option key={e.email} value={e.email} className="bg-gray-800">
-                                        {e.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-white/80 mb-2">
-                                Assign Creator (Optional)
-                            </label>
-                            <select
-                                value={formData.assigned_creator_email}
-                                onChange={(e) => setFormData({ ...formData, assigned_creator_email: e.target.value })}
-                                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
-                            >
-                                <option value="">None</option>
-                                {creators.map(c => (
-                                    <option key={c.email} value={c.email} className="bg-gray-800">
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Assign Editor
+                        </label>
+                        <select
+                            value={formData.assigned_editor_email}
+                            onChange={(e) => setFormData({ ...formData, assigned_editor_email: e.target.value })}
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                        >
+                            <option value="">Assign Later</option>
+                            {safeEditors.map(e => (
+                                <option key={e.email} value={e.email}>
+                                    {e.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Assign Creator (Optional)
+                        </label>
+                        <select
+                            value={formData.assigned_creator_email}
+                            onChange={(e) => setFormData({ ...formData, assigned_creator_email: e.target.value })}
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
+                        >
+                            <option value="">None</option>
+                            {safeCreators.map(c => (
+                                <option key={c.email} value={c.email}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Deadline
                         </label>
                         <input
                             type="date"
                             value={formData.deadline}
                             onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-white/80 mb-2">
-                            Notes/Requirements
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Notes / Requirements
                         </label>
                         <textarea
                             placeholder="Additional details..."
                             value={formData.notes}
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                             rows={3}
-                            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow]"
                         />
                     </div>
+                </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <button
-                            type="submit"
-                            className="flex-1 glass-button"
-                        >
-                            Create Asset
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                <div className="flex flex-col gap-3 pt-4 sm:flex-row">
+                    <Button type="submit" className="flex-1 gap-2">
+                        <Plus className="w-4 h-4" />
+                        Create Asset
+                    </Button>
+                    <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
+                        Cancel
+                    </Button>
+                </div>
+            </form>
+        </ModalPortal>
     );
 }

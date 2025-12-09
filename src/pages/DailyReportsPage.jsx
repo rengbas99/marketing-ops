@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import Card from '../components/primitives/Card.jsx';
 import { ArrowLeft, Calendar, FileText, User, Search, Filter, Clock, CheckCircle, Camera, FileEdit, MapPin, Download, X } from 'lucide-react';
 import { COLLECTIONS, ROLES } from '../constants';
 
@@ -472,7 +473,7 @@ export default function DailyReportsPage() {
         </div>
 
         {/* Filters */}
-        <div className="glass-card p-4 mb-6">
+        <Card glass className="p-4 mb-6">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-bold text-gray-700 mb-2">Search</label>
@@ -513,15 +514,18 @@ export default function DailyReportsPage() {
               />
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Split-Pane Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Pane: Worker List (25-30%) */}
           <div className="lg:col-span-1">
-            <div className="glass-card p-4">
+            <Card glass className="p-4">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Workers ({filteredWorkers.length})</h2>
-              <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
+              <div
+                className="space-y-2 overflow-y-auto"
+                style={{ maxHeight: 'calc((var(--vh) * 100) - 400px)' }}
+              >
                 {filteredWorkers.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -536,7 +540,7 @@ export default function DailyReportsPage() {
                       <button
                         key={workerData.email}
                         onClick={() => setSelectedWorkerEmail(workerData.email)}
-                        className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                        className={`w-full p-4 rounded-xl border-2 transition-[transform,opacity,colors,shadow] text-left ${
                           isSelected
                             ? 'border-primary bg-primary/5 shadow-md'
                             : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
@@ -580,13 +584,13 @@ export default function DailyReportsPage() {
                   })
                 )}
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* Right Pane: Activity Log (70-75%) */}
           <div className="lg:col-span-3">
             {selectedWorkerUser ? (
-              <div className="glass-card p-6">
+              <Card glass className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
@@ -631,7 +635,7 @@ export default function DailyReportsPage() {
                       return (
                         <div
                           key={index}
-                          className={`p-5 rounded-xl border-2 ${activity.border} ${activity.bg} transition-all`}
+                          className={`p-5 rounded-xl border-2 ${activity.border} ${activity.bg} transition-[transform,opacity,colors,shadow]`}
                         >
                           <div className="flex items-start gap-4">
                             <div className={`p-3 rounded-lg ${activity.bg} border ${activity.border}`}>
@@ -682,13 +686,13 @@ export default function DailyReportsPage() {
                     })
                   )}
                 </div>
-              </div>
+              </Card>
             ) : (
-              <div className="glass-card p-12 text-center">
+              <Card glass className="p-12 text-center">
                 <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-gray-700 mb-2">Select a Worker</h3>
                 <p className="text-gray-500">Choose a worker from the list to view their activity log</p>
-              </div>
+              </Card>
             )}
           </div>
         </div>

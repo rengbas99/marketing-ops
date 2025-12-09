@@ -9,10 +9,13 @@ import WorkLinksModal from '../../components/WorkLinksModal';
 import ProgressTracker from '../../components/ProgressTracker';
 import EditorSubtaskWidget from '../../components/EditorSubtaskWidget';
 import ConfirmDialog from '../../components/ConfirmDialog';
-import { FileEdit, Clock, CheckCircle, AlertCircle, AlertTriangle, Coffee, Link as LinkIcon, LogIn, LogOut, X, Play, Plane } from 'lucide-react';
+import { FileEdit, Clock, CheckCircle, AlertCircle, AlertTriangle, Coffee, Link as LinkIcon, LogIn, LogOut, Play, Plane } from 'lucide-react';
 import { formatBreakDuration, calculateTotalBreakDuration } from '../../utils/timeFormatting';
 import { COLLECTIONS, ASSET_STATUS } from '../../constants';
 import { canClockIn, shouldAutoClockOut, findStaleClockIns } from '../../utils/attendanceUtils';
+import Card from '../../components/primitives/Card.jsx';
+import Button from '../../components/primitives/Button.jsx';
+import ModalPortal from '../../components/primitives/ModalPortal.jsx';
 
 export default function EditorDashboard() {
   const { data, loading, startPolling, stopPolling, updateRow, addRow, forceRefresh } = useData();
@@ -978,22 +981,24 @@ export default function EditorDashboard() {
       />
 
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
           Welcome back, <span className="text-gradient">{user?.name || 'Editor'}</span>!
         </h1>
         <p className="text-gray-600">Track your editing tasks and time</p>
-      </div>
+      </Card>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
+        <Card
+          glass
+          as="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             navigate('/dashboard/leave-requests');
           }}
-          className="glass-card p-6 flex items-center gap-4 group hover:bg-white/80 cursor-pointer transition-all"
+          className="p-6 flex items-center gap-4 group hover:bg-white/80 cursor-pointer transition-[transform,opacity,colors,shadow]"
           type="button"
         >
           <div className="p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
@@ -1003,11 +1008,11 @@ export default function EditorDashboard() {
             <h3 className="text-lg font-bold text-gray-900">Leave Requests</h3>
             <p className="text-sm text-gray-600">Request leave or view your requests</p>
           </div>
-        </button>
+        </Card>
       </div>
 
       {/* Clock In/Out Card */}
-      <div className={`glass-card p-6 transition-all duration-300 ${clockedIn ? 'border-green-500/50 bg-green-50/50' : ''
+      <Card glass className={`p-6 transition-[transform,opacity,colors,shadow] duration-300 ${clockedIn ? 'border-green-500/50 bg-green-50/50' : ''
         }`}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -1099,13 +1104,14 @@ export default function EditorDashboard() {
 
             <div className="flex gap-3">
               {!activeBreak && (
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => setShowBreakDialog(true)}
-                  className="flex-1 glass-button text-gray-700 hover:text-primary flex items-center justify-center gap-2"
+                  icon={Coffee}
+                  className="flex-1"
                 >
-                  <Coffee className="w-4 h-4" />
                   Take Break
-                </button>
+                </Button>
               )}
               <button
                 onClick={handleClockOutClick}
@@ -1132,104 +1138,95 @@ export default function EditorDashboard() {
             <p className="text-gray-600">Select a task and clock in to start working</p>
             <button
               onClick={() => setShowAssetSelector(true)}
-              className="w-full bg-primary text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:bg-primary-dark transition-all transform hover:scale-[1.02] flex items-center justify-center gap-3"
+              className="w-full bg-primary text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/30 hover:bg-primary-dark transition-[transform,opacity,colors,shadow] transform hover:scale-[1.02] flex items-center justify-center gap-3"
             >
               <LogIn className="w-6 h-6" />
               Clock In & Select Task
             </button>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Asset Selector Modal */}
-      {showAssetSelector && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 transition-opacity"
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
-            onClick={() => {
-              setShowAssetSelector(false);
-              setSelectedAssetForClockIn('');
-            }}
-          />
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative z-[101] animate-fadeIn" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Select Task</h3>
-              <button
-                onClick={() => {
-                  setShowAssetSelector(false);
-                  setSelectedAssetForClockIn('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Available Tasks</label>
-              <select
-                value={selectedAssetForClockIn}
-                onChange={(e) => setSelectedAssetForClockIn(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              >
-                <option value="">General Work (No specific task)</option>
-                {assetsByStatus['To Edit'].concat(assetsByStatus['Revision'], assetsByStatus['In Progress'])
-                  .map(asset => {
-                    const client = clients.find(c => c && c.client_id === asset.client_id);
-                    return (
-                      <option key={asset.asset_id} value={asset.asset_id}>
-                        {asset.title} {client ? `- ${client.company_name}` : ''} ({asset.status})
-                      </option>
-                    );
-                  })}
-              </select>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAssetSelector(false);
-                  setSelectedAssetForClockIn('');
-                }}
-                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleClockIn}
-                disabled={isClockInLoading}
-                className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isClockInLoading ? 'Processing...' : 'Clock In'}
-              </button>
-            </div>
+      <ModalPortal
+        id="editor-asset-selector"
+        isOpen={showAssetSelector}
+        onClose={() => {
+          setShowAssetSelector(false);
+          setSelectedAssetForClockIn('');
+        }}
+        title="Select Task"
+        description="Clock in for general work or pick a specific task."
+        size="md"
+        footer={({ close }) => (
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setSelectedAssetForClockIn('');
+                close();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              disabled={isClockInLoading}
+              onClick={async () => {
+                await handleClockIn();
+                close();
+              }}
+            >
+              {isClockInLoading ? 'Processing…' : 'Clock In'}
+            </Button>
           </div>
+        )}
+      >
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700">
+            Available Tasks
+          </label>
+          <select
+            value={selectedAssetForClockIn}
+            onChange={(e) => setSelectedAssetForClockIn(e.target.value)}
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+          >
+            <option value="">General Work (No specific task)</option>
+            {assetsByStatus['To Edit'].concat(assetsByStatus['Revision'], assetsByStatus['In Progress'])
+              .map(asset => {
+                const client = clients.find(c => c && c.client_id === asset.client_id);
+                return (
+                  <option key={asset.asset_id} value={asset.asset_id}>
+                    {asset.title} {client ? `- ${client.company_name}` : ''} ({asset.status})
+                  </option>
+                );
+              })}
+          </select>
         </div>
-      )}
+      </ModalPortal>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="glass-card p-4 text-center">
+        <Card glass className="p-4 text-center">
           <div className="text-2xl font-bold text-gray-900">{stats.toEdit}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">To Edit</div>
-        </div>
-        <div className="glass-card p-4 text-center">
+        </Card>
+        <Card glass className="p-4 text-center">
           <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">In Progress</div>
-        </div>
-        <div className="glass-card p-4 text-center">
+        </Card>
+        <Card glass className="p-4 text-center">
           <div className="text-2xl font-bold text-orange-500">{stats.revision}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">Revision</div>
-        </div>
-        <div className="glass-card p-4 text-center">
+        </Card>
+        <Card glass className="p-4 text-center">
           <div className="text-2xl font-bold text-purple-600">{stats.inReview}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">In Review</div>
-        </div>
-        <div className="glass-card p-4 text-center">
+        </Card>
+        <Card glass className="p-4 text-center">
           <div className="text-2xl font-bold text-green-600">{stats.hoursToday.toFixed(1)}h</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">Hours Today</div>
-        </div>
+        </Card>
       </div>
 
       {/* Tasks List */}
@@ -1285,76 +1282,60 @@ export default function EditorDashboard() {
         )}
       </div>
 
-      {/* Clock Out Report Modal */}
-      {showClockOutReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 transition-opacity" 
-            style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowClockOutReport(false);
-                setClockOutReport('');
-              }
-            }} 
-          />
-          <div className="w-full max-w-md relative z-[111] animate-fadeIn bg-white rounded-2xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Daily Work Report</h3>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              (Optional) Provide a brief summary of what you accomplished today before clocking out.
-            </p>
-            <textarea
-              value={clockOutReport}
-              onChange={(e) => setClockOutReport(e.target.value)}
-              placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions... (Optional)"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none mb-4"
-              rows="5"
-              autoFocus
+      <ModalPortal
+        id="editor-clockout-report"
+        isOpen={showClockOutReport}
+        onClose={() => {
+          setShowClockOutReport(false);
+          setClockOutReport('');
+        }}
+        title="Daily Work Report"
+        description="(Optional) Provide a brief summary before clocking out."
+        size="md"
+        footer={({ close }) => (
+          <div className="flex gap-3">
+            <Button
+              className="flex-1 gap-2"
               disabled={isClockOutLoading}
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleClockOut(clockOutReport)}
-                disabled={isClockOutLoading}
-                className="flex-1 bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isClockOutLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="w-5 h-5" />
-                    Clock Out
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowClockOutReport(false);
-                  setClockOutReport('');
-                }}
-                disabled={isClockOutLoading}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
+              onClick={async () => {
+                await handleClockOut(clockOutReport);
+                close();
+              }}
+            >
+              {isClockOutLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  Clock Out
+                </>
+              )}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={isClockOutLoading}
+              onClick={() => {
+                setClockOutReport('');
+                close();
+              }}
+            >
+              Cancel
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      >
+        <textarea
+          value={clockOutReport}
+          onChange={(e) => setClockOutReport(e.target.value)}
+          placeholder="E.g., Completed 3 client assets, attended team meeting, reviewed 2 submissions..."
+          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-[transform,opacity,colors,shadow] resize-none"
+          rows="5"
+          disabled={isClockOutLoading}
+        />
+      </ModalPortal>
     </div>
   );
 }
@@ -1363,7 +1344,7 @@ function TaskCard({ asset, client, onStart, isActive, isClockedIn, activeTimeLog
   const isRevision = asset.status === ASSET_STATUS.REVISION;
 
   return (
-    <div className={`glass-card p-4 transition-all ${isActive ? 'ring-2 ring-primary' : 'hover:bg-white/80'}`}>
+    <Card glass className={`p-4 transition-[transform,opacity,colors,shadow] ${isActive ? 'ring-2 ring-primary' : 'hover:bg-white/80'}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -1426,6 +1407,6 @@ function TaskCard({ asset, client, onStart, isActive, isClockedIn, activeTimeLog
           }}
         />
       )}
-    </div>
+    </Card>
   );
 }

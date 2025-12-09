@@ -1,103 +1,116 @@
-import { useState } from 'react';
-import { X, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useId, useState } from 'react';
+import { Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import OverlayMount from './overlay/OverlayMount.jsx';
+import Modal from './primitives/Modal.jsx';
+import Button from './primitives/Button.jsx';
 
 export default function WorkLinksModal({ isOpen, onClose, onSave, existingLinks = '', title = 'Add Work Links' }) {
   const [links, setLinks] = useState(existingLinks ? existingLinks.split(',').filter(l => l.trim()) : ['']);
+  const reactId = useId();
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setLinks(existingLinks ? existingLinks.split(',').filter(l => l.trim()) : ['']);
+    }
+  }, [existingLinks, isOpen]);
 
-  const handleAddLink = () => {
-    setLinks([...links, '']);
-  };
+  const renderOverlay = useCallback(
+    ({ close }) => {
+      const handleClose = () => {
+        close();
+        onClose?.();
+      };
 
-  const handleRemoveLink = (index) => {
-    setLinks(links.filter((_, i) => i !== index));
-  };
+      const handleSave = () => {
+        const validLinks = links.filter(l => l.trim()).map(l => l.trim());
+        onSave(validLinks.join(', '));
+        handleClose();
+      };
 
-  const handleLinkChange = (index, value) => {
-    const newLinks = [...links];
-    newLinks[index] = value;
-    setLinks(newLinks);
-  };
+      const handleAddLink = () => {
+        setLinks(prev => [...prev, '']);
+      };
 
-  const handleSave = () => {
-    const validLinks = links.filter(l => l.trim()).map(l => l.trim());
-    onSave(validLinks.join(', '));
-    onClose();
-  };
+      const handleRemoveLink = (index) => {
+        setLinks(prev => prev.filter((_, i) => i !== index));
+      };
+
+      const handleLinkChange = (index, value) => {
+        setLinks(prev => {
+          const next = [...prev];
+          next[index] = value;
+          return next;
+        });
+      };
+
+      return (
+        <Modal
+          title={title}
+          description="Add Google Drive, Dropbox, or other file/folder links where completed work is stored."
+          onClose={handleClose}
+          size="lg"
+          footer={(
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave}>
+                Save Links
+              </Button>
+            </div>
+          )}
+        >
+          <div className="space-y-4">
+            {links.map((link, index) => (
+              <div key={`${link}-${index}`} className="flex items-center gap-3">
+                <div className="flex-1 relative">
+                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="url"
+                    value={link}
+                    onChange={(e) => handleLinkChange(index, e.target.value)}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+                  />
+                </div>
+                {links.length > 1 && (
+                  <Button
+                    onClick={() => handleRemoveLink(index)}
+                    variant="secondary"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 border-red-100 hover:border-red-200"
+                    aria-label="Remove link"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <Button
+            variant="secondary"
+            className="mt-6 w-full border-dashed border-2 border-gray-300 text-gray-600 hover:border-primary hover:text-primary"
+            onClick={handleAddLink}
+            size="md"
+          >
+            <Plus className="w-4 h-4" />
+            Add Another Link
+          </Button>
+        </Modal>
+      );
+    },
+    [links, onClose, onSave, title],
+  );
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={onClose} />
-      <div className="glass-card w-full max-w-2xl p-6 relative z-[101] animate-fadeIn max-h-[90vh] overflow-y-auto bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <LinkIcon className="w-5 h-5 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        <p className="text-sm text-gray-600 font-medium mb-6">
-          Add Google Drive, Dropbox, or other file/folder links where your work is stored.
-        </p>
-
-        <div className="space-y-4 mb-6">
-          {links.map((link, index) => (
-            <div key={index} className="flex items-center gap-3 animate-fadeIn">
-              <div className="flex-1 relative">
-                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="url"
-                  value={link}
-                  onChange={(e) => handleLinkChange(index, e.target.value)}
-                  placeholder="https://drive.google.com/..."
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                />
-              </div>
-              {links.length > 1 && (
-                <button
-                  onClick={() => handleRemoveLink(index)}
-                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-transparent hover:border-red-100"
-                  title="Remove link"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={handleAddLink}
-          className="w-full mb-8 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 font-bold hover:border-primary hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Add Another Link
-        </button>
-
-        <div className="flex gap-4">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/30"
-          >
-            Save Links
-          </button>
-        </div>
-      </div>
-    </div>
+    <OverlayMount
+      id={`work-links-${reactId}`}
+      isOpen={isOpen}
+      type="modal"
+      blocking
+      priority={20}
+      render={renderOverlay}
+    />
   );
 }

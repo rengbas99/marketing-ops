@@ -1,4 +1,5 @@
 import { useData } from '../contexts/DataContext';
+import Card from './primitives/Card.jsx';
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useCallback } from 'react';
 import { COLLECTIONS } from '../constants';
@@ -35,7 +36,7 @@ export default function ConnectionStatus() {
 
   return (
     <div className="fixed bottom-6 right-6 z-40">
-      <div className={`glass-card flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl backdrop-blur-md transition-all duration-300 ${actuallyConnected
+      <Card glass className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl backdrop-blur-md transition-colors duration-300 ${actuallyConnected
           ? 'bg-green-500/10 border-green-500/20 text-green-700'
           : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700'
         }`}>
@@ -64,7 +65,7 @@ export default function ConnectionStatus() {
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
-      </div>
+      </Card>
     </div>
   );
 }

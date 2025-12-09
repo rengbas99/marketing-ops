@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import Card from '../components/primitives/Card.jsx';
 import { FileEdit, Clock, Coffee, User, MapPin, Link as LinkIcon, TrendingUp, CheckCircle, Activity, Eye, Edit, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatBreakDuration, formatTime as formatTimeUtil } from '../utils/timeFormatting';
 import { COLLECTIONS, ASSET_STATUS } from '../constants';
 import { useNavigate } from 'react-router-dom';
 import UpdateAssetModal from '../components/UpdateAssetModal';
 import AssetWorkDetailsModal from '../components/AssetWorkDetailsModal';
+import ModalPortal from '../components/primitives/ModalPortal.jsx';
 
 export default function ActiveEditingPage() {
   const { data, loading, startPolling, stopPolling } = useData();
@@ -150,26 +152,27 @@ export default function ActiveEditingPage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Active Editing Sessions</h1>
           <p className="text-gray-600">View all team members currently working on tasks</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="glass-panel p-3 bg-purple-50 border-purple-100">
+          <Card glass className="p-3 bg-purple-50 border-purple-100">
             <div className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Active</div>
             <div className="text-2xl font-bold text-gray-900">{activeEditors.length}</div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </Card>
 
       {/* Active Editors Grid */}
       {activeEditors.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {activeEditors.map((log, index) => (
-            <div
+            <Card
+              glass
               key={log.log_id || index}
-              className={`glass-card p-6 transition-all hover:shadow-lg ${log.activeBreak
+              className={`p-6 transition-[transform,opacity,colors,shadow] hover:shadow-lg ${log.activeBreak
                   ? 'border-orange-200 bg-orange-50/30'
                   : 'border-gray-100'
                 }`}
@@ -227,7 +230,7 @@ export default function ActiveEditingPage() {
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+                      className="bg-primary h-2 rounded-full transition-[transform,opacity,colors,shadow] duration-500 ease-out"
                       style={{ width: `${log.asset.work_progress || 0}%` }}
                     />
                   </div>
@@ -287,144 +290,125 @@ export default function ActiveEditingPage() {
                   Edit
                 </button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : (
-        <div className="glass-card p-12 text-center">
+        <Card glass className="p-12 text-center">
           <FileEdit className="w-16 h-16 mx-auto mb-4 text-gray-300" />
           <h3 className="text-xl font-bold text-gray-900 mb-2">No Active Editing Sessions</h3>
           <p className="text-gray-600">Team members will appear here when they start working on tasks</p>
-        </div>
+        </Card>
       )}
 
-      {/* Editor Workload Detail Modal */}
-      {selectedEditorWorkload && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="fixed inset-0 transition-opacity z-[100]" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)', borderRadius: '16px' }} onClick={() => setSelectedEditorWorkload(null)} />
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-[101] animate-fadeIn bg-white rounded-3xl border border-gray-100 p-6" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-            <div className="sticky top-0 bg-white border-b border-gray-100 pb-4 mb-6 -mx-6 px-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg">
-                    {selectedEditorWorkload.editor?.name?.charAt(0) || 'E'}
+      <ModalPortal
+        id="editor-workload"
+        isOpen={Boolean(selectedEditorWorkload)}
+        onClose={() => setSelectedEditorWorkload(null)}
+        title={selectedEditorWorkload ? (selectedEditorWorkload.editor?.name || selectedEditorWorkload.editor_email) : 'Editor workload'}
+        description={selectedEditorWorkload ? `Currently working on: ${selectedEditorWorkload.asset?.title || 'Unknown'}` : undefined}
+        size="lg"
+      >
+        {selectedEditorWorkload ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <ChevronLeft className="w-5 h-5 text-gray-400" />
+                Previous Tasks (Last 6)
+              </h4>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                {selectedEditorWorkload.previousTasks && selectedEditorWorkload.previousTasks.length > 0 ? (
+                  selectedEditorWorkload.previousTasks.map((task, index) => {
+                    const shoot = task?.shoot_id ? shoots.find(s => s && s.shoot_id === task.shoot_id) : null;
+                    const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
+                    let deadlineStr = '';
+                    try {
+                      if (task?.deadline) {
+                        const deadline = new Date(task.deadline);
+                        if (!isNaN(deadline.getTime())) {
+                          deadlineStr = deadline.toLocaleDateString();
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Error parsing deadline:', e);
+                    }
+                    return (
+                      <div key={task?.asset_id || index} className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                        <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
+                        {client && (
+                          <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
+                        )}
+                        {deadlineStr && (
+                          <p className="text-xs text-gray-500">
+                            Completed: {deadlineStr}
+                          </p>
+                        )}
+                        <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
+                          {task?.status || 'Completed'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <p className="text-sm">No previous tasks</p>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">{selectedEditorWorkload.editor?.name || selectedEditorWorkload.editor_email}</h3>
-                    <p className="text-sm text-gray-600">Currently working on: {selectedEditorWorkload.asset?.title || 'Unknown'}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedEditorWorkload(null)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Previous Tasks */}
-              <div>
-                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <ChevronLeft className="w-5 h-5 text-gray-400" />
-                  Previous Tasks (Last 6)
-                </h4>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                  {selectedEditorWorkload.previousTasks && selectedEditorWorkload.previousTasks.length > 0 ? (
-                    selectedEditorWorkload.previousTasks.map((task, index) => {
-                      const shoot = task?.shoot_id ? shoots.find(s => s && s.shoot_id === task.shoot_id) : null;
-                      const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
-                      let deadlineStr = '';
-                      try {
-                        if (task?.deadline) {
-                          const deadline = new Date(task.deadline);
-                          if (!isNaN(deadline.getTime())) {
-                            deadlineStr = deadline.toLocaleDateString();
-                          }
+            <div>
+              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+                Upcoming Tasks (Next 6)
+              </h4>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                {selectedEditorWorkload.upcomingTasks && selectedEditorWorkload.upcomingTasks.length > 0 ? (
+                  selectedEditorWorkload.upcomingTasks.map((task, index) => {
+                    const shoot = task?.shoot_id ? shoots.find(s => s && s.shoot_id === task.shoot_id) : null;
+                    const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
+                    let isOverdue = false;
+                    let deadlineStr = '';
+                    try {
+                      if (task?.deadline) {
+                        const deadline = new Date(task.deadline);
+                        if (!isNaN(deadline.getTime())) {
+                          deadlineStr = deadline.toLocaleDateString();
+                          isOverdue = deadline < new Date();
                         }
-                      } catch (e) {
-                        console.error('Error parsing deadline:', e);
                       }
-                      return (
-                        <div key={task?.asset_id || index} className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                          <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
-                          {client && (
-                            <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
-                          )}
-                          {deadlineStr && (
-                            <p className="text-xs text-gray-500">
-                              Completed: {deadlineStr}
-                            </p>
-                          )}
-                          <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
-                            {task?.status || 'Completed'}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                      <p className="text-sm">No previous tasks</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Upcoming Tasks */}
-              <div>
-                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
-                  Upcoming Tasks (Next 6)
-                </h4>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                  {selectedEditorWorkload.upcomingTasks && selectedEditorWorkload.upcomingTasks.length > 0 ? (
-                    selectedEditorWorkload.upcomingTasks.map((task, index) => {
-                      const shoot = task?.shoot_id ? shoots.find(s => s && s.shoot_id === task.shoot_id) : null;
-                      const client = shoot ? clients.find(c => c && c.client_id === shoot.client_id) : null;
-                      let isOverdue = false;
-                      let deadlineStr = '';
-                      try {
-                        if (task?.deadline) {
-                          const deadline = new Date(task.deadline);
-                          if (!isNaN(deadline.getTime())) {
-                            deadlineStr = deadline.toLocaleDateString();
-                            isOverdue = deadline < new Date();
-                          }
-                        }
-                      } catch (e) {
-                        console.error('Error parsing deadline:', e);
-                      }
-                      return (
-                        <div key={task?.asset_id || index} className={`p-4 border rounded-xl ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-                          <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
-                          {client && (
-                            <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
-                          )}
-                          {deadlineStr && (
-                            <p className={`text-xs font-medium mb-2 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-                              <Clock className="w-3 h-3 inline mr-1" />
-                              Due: {deadlineStr}
-                              {isOverdue && ' (Overdue)'}
-                            </p>
-                          )}
-                          <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-bold ${task?.status === ASSET_STATUS.TO_EDIT ? 'bg-yellow-100 text-yellow-700' : task?.status === ASSET_STATUS.IN_PROGRESS ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                            {task?.status || 'Pending'}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                      <p className="text-sm">No upcoming tasks</p>
-                    </div>
-                  )}
-                </div>
+                    } catch (e) {
+                      console.error('Error parsing deadline:', e);
+                    }
+                    return (
+                      <div key={task?.asset_id || index} className={`p-4 border rounded-xl ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+                        <h5 className="font-bold text-gray-900 mb-1">{task?.title || 'Untitled'}</h5>
+                        {client && (
+                          <p className="text-xs text-primary font-bold uppercase tracking-wider mb-2">{client.company_name}</p>
+                        )}
+                        {deadlineStr && (
+                          <p className={`text-xs font-medium mb-2 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                            <Clock className="w-3 h-3 inline mr-1" />
+                            Due: {deadlineStr}
+                            {isOverdue && ' (Overdue)'}
+                          </p>
+                        )}
+                        <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-bold ${task?.status === ASSET_STATUS.TO_EDIT ? 'bg-yellow-100 text-yellow-700' : task?.status === ASSET_STATUS.IN_PROGRESS ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {task?.status || 'Pending'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <p className="text-sm">No upcoming tasks</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </ModalPortal>
 
       {/* Update Asset Modal */}
       {selectedAsset && (

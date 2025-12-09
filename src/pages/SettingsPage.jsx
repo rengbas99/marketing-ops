@@ -3,6 +3,8 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import { Settings, User, Mail, Shield, Save, Plus, X, CheckCircle, XCircle, Lock } from 'lucide-react';
+import Card from '../components/primitives/Card.jsx';
+import Button from '../components/primitives/Button.jsx';
 import { COLLECTIONS, ROLES } from '../constants';
 
 export default function SettingsPage() {
@@ -111,7 +113,7 @@ export default function SettingsPage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
             <Settings className="w-8 h-8 text-primary" />
@@ -119,18 +121,17 @@ export default function SettingsPage() {
           </h1>
           <p className="text-gray-600">Manage users and system settings</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowAddUser(!showAddUser)}
-          className="glass-button bg-primary text-white hover:bg-primary-dark"
+          icon={showAddUser ? X : Plus}
         >
-          {showAddUser ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-          <span>{showAddUser ? 'Cancel' : 'Add User'}</span>
-        </button>
-      </div>
+          {showAddUser ? 'Cancel' : 'Add User'}
+        </Button>
+      </Card>
 
       {/* Add User Form */}
       {showAddUser && (
-        <div className="glass-card p-6 animate-fadeIn">
+        <Card glass className="p-6 animate-fadeIn">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <User className="w-6 h-6 text-primary" />
             Add New User
@@ -146,7 +147,7 @@ export default function SettingsPage() {
                     required
                     value={newUser.email}
                     onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                     placeholder="user@company.com"
                   />
                 </div>
@@ -160,7 +161,7 @@ export default function SettingsPage() {
                     required
                     value={newUser.name}
                     onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                     placeholder="Full Name"
                   />
                 </div>
@@ -172,7 +173,7 @@ export default function SettingsPage() {
                   <select
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all appearance-none"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow] appearance-none"
                   >
                     <option value={ROLES.CONTENT_CREATOR}>Content Creator</option>
                     <option value={ROLES.EDITOR}>Designer</option>
@@ -192,7 +193,7 @@ export default function SettingsPage() {
                     required
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                     placeholder="Enter password"
                     minLength={4}
                   />
@@ -217,11 +218,11 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Users List */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <Shield className="w-6 h-6 text-primary" />
           User Management ({users.length})
@@ -231,7 +232,7 @@ export default function SettingsPage() {
             users.map((u, index) => (
               <div
                 key={u.email || index}
-                className="p-4 border border-gray-100 rounded-xl hover:shadow-md transition-all bg-white group animate-fadeIn"
+                className="p-4 border border-gray-100 rounded-xl hover:shadow-md transition-[transform,opacity,colors,shadow] bg-white group animate-fadeIn"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className="flex items-center justify-between gap-4">
@@ -274,7 +275,7 @@ export default function SettingsPage() {
                   {u.email !== user?.email && (
                     <button
                       onClick={() => handleToggleUserStatus(u.email, u.active)}
-                      className={`p-2 rounded-lg transition-all ${u.active === 'FALSE' || u.active === false
+                      className={`p-2 rounded-lg transition-[transform,opacity,colors,shadow] ${u.active === 'FALSE' || u.active === false
                           ? 'text-green-600 hover:bg-green-50'
                           : 'text-red-600 hover:bg-red-50'
                         }`}
@@ -297,7 +298,7 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

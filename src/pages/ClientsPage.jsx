@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import { Plus, Mail, Phone, Calendar, FileText, TrendingUp, Camera, Users, MapPin, Search, Edit, X, Trash2, AlertTriangle } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Card from '../components/primitives/Card.jsx';
 import { COLLECTIONS, ROLES, SHOOT_STATUS, ASSET_STATUS } from '../constants';
 
 export default function ClientsPage() {
@@ -226,7 +227,7 @@ export default function ClientsPage() {
   return (
     <div className="animate-fadeIn mobile-padding pb-8 space-y-8">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Clients</h1>
           <p className="text-gray-600">Manage client relationships and projects</p>
@@ -234,17 +235,17 @@ export default function ClientsPage() {
         {(user?.role === ROLES.LEAD || user?.role === ROLES.MANAGER || user?.role === ROLES.CONTENT_CREATOR || user?.role === 'sales') && (
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-primary text-white hover:bg-primary-dark px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+            className="bg-primary text-white hover:bg-primary-dark px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/30 transition-[transform,opacity,colors,shadow] duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             <span>Add Client</span>
           </button>
         )}
-      </div>
+      </Card>
 
       {/* Add Client Form */}
       {showAddForm && (
-        <div className="glass-card p-6 animate-fadeIn">
+        <Card glass className="p-6 animate-fadeIn">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Add New Client</h2>
           <form onSubmit={handleAddClient} className="space-y-4">
             <div>
@@ -254,7 +255,7 @@ export default function ClientsPage() {
                 required
                 value={newClient.company_name}
                 onChange={(e) => setNewClient({ ...newClient, company_name: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 placeholder="Enter company name"
               />
             </div>
@@ -265,7 +266,7 @@ export default function ClientsPage() {
                   type="text"
                   value={newClient.contact_name}
                   onChange={(e) => setNewClient({ ...newClient, contact_name: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                   placeholder="Contact person name"
                 />
               </div>
@@ -275,7 +276,7 @@ export default function ClientsPage() {
                   type="email"
                   value={newClient.contact_email}
                   onChange={(e) => setNewClient({ ...newClient, contact_email: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                   placeholder="contact@company.com"
                 />
               </div>
@@ -286,7 +287,7 @@ export default function ClientsPage() {
                 type="tel"
                 value={newClient.contact_phone}
                 onChange={(e) => setNewClient({ ...newClient, contact_phone: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 placeholder="+1 (555) 123-4567"
               />
             </div>
@@ -296,7 +297,7 @@ export default function ClientsPage() {
                 value={newClient.notes}
                 onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 placeholder="Additional notes..."
               />
             </div>
@@ -316,12 +317,12 @@ export default function ClientsPage() {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* Edit Client Form */}
       {showEditForm && editingClient && (
-        <div className="glass-card p-6 animate-fadeIn">
+        <Card glass className="p-6 animate-fadeIn">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">Edit Client</h2>
             <button
@@ -342,7 +343,7 @@ export default function ClientsPage() {
                 required
                 value={editingClient.company_name || ''}
                 onChange={(e) => setEditingClient({ ...editingClient, company_name: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 placeholder="Enter company name"
               />
             </div>
@@ -353,7 +354,7 @@ export default function ClientsPage() {
                   type="text"
                   value={editingClient.contact_name || ''}
                   onChange={(e) => setEditingClient({ ...editingClient, contact_name: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                   placeholder="Contact person name"
                 />
               </div>
@@ -363,7 +364,7 @@ export default function ClientsPage() {
                   type="email"
                   value={editingClient.contact_email || ''}
                   onChange={(e) => setEditingClient({ ...editingClient, contact_email: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                   placeholder="contact@company.com"
                 />
               </div>
@@ -374,7 +375,7 @@ export default function ClientsPage() {
                 type="tel"
                 value={editingClient.contact_phone || ''}
                 onChange={(e) => setEditingClient({ ...editingClient, contact_phone: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 placeholder="+1 (555) 123-4567"
               />
             </div>
@@ -384,7 +385,7 @@ export default function ClientsPage() {
                 value={editingClient.notes || ''}
                 onChange={(e) => setEditingClient({ ...editingClient, notes: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
                 placeholder="Additional notes..."
               />
             </div>
@@ -407,13 +408,17 @@ export default function ClientsPage() {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Client List Sidebar */}
         <div className="lg:col-span-1">
-          <div className="glass-card p-4 h-[calc(100vh-200px)] flex flex-col">
+          <Card
+            glass
+            className="p-4 flex flex-col"
+            style={{ height: 'calc((var(--vh) * 100) - 200px)' }}
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">Client List</h2>
               <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
@@ -428,7 +433,7 @@ export default function ClientsPage() {
                 placeholder="Search clients..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
               />
             </div>
 
@@ -439,7 +444,7 @@ export default function ClientsPage() {
                     key={client.client_id || index}
                     data-client-id={client.client_id}
                     onClick={() => setSelectedClient(client)}
-                    className={`w-full text-left p-4 rounded-xl transition-all duration-200 group ${selectedClient?.client_id === client.client_id
+                    className={`w-full text-left p-4 rounded-xl transition-[transform,opacity,colors,shadow] duration-200 group ${selectedClient?.client_id === client.client_id
                         ? 'bg-primary text-white shadow-lg shadow-primary/30'
                         : 'bg-gray-50 hover:bg-white hover:shadow-md text-gray-900'
                       }`}
@@ -462,14 +467,14 @@ export default function ClientsPage() {
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Client Detail Panel */}
         {selectedClient && (
           <div className="lg:col-span-2 space-y-6">
             {/* Client Info */}
-            <div className="glass-card p-6 relative overflow-hidden">
+            <Card glass className="p-6 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full -z-10" />
               <div className="flex items-start justify-between mb-6">
                 <h2 className="text-3xl font-bold text-gray-900">
@@ -528,10 +533,10 @@ export default function ClientsPage() {
                   <p className="text-gray-700 leading-relaxed">{selectedClient.notes}</p>
                 </div>
               )}
-            </div>
+            </Card>
 
             {/* Related Shoots */}
-            <div className="glass-card p-6">
+            <Card glass className="p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <Camera className="w-5 h-5 text-purple-600" />
                 Related Shoots ({relatedShoots.length})
@@ -541,7 +546,7 @@ export default function ClientsPage() {
                   relatedShoots.map((shoot, index) => (
                     <div
                       key={shoot.shoot_id || index}
-                      className="p-4 rounded-xl bg-white border border-gray-100 hover:shadow-md transition-all flex items-center justify-between gap-4"
+                      className="p-4 rounded-xl bg-white border border-gray-100 hover:shadow-md transition-[transform,opacity,colors,shadow] flex items-center justify-between gap-4"
                     >
                       <div>
                         <h4 className="font-bold text-gray-900 mb-1">
@@ -575,11 +580,11 @@ export default function ClientsPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Assets in Progress */}
-              <div className="glass-card p-6">
+              <Card glass className="p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-blue-600" />
                   Active Assets
@@ -591,7 +596,7 @@ export default function ClientsPage() {
                       .map((asset, index) => (
                         <div
                           key={asset.asset_id || index}
-                          className="p-3 rounded-lg bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-sm transition-all"
+                          className="p-3 rounded-lg bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-sm transition-[transform,opacity,colors,shadow]"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
@@ -615,10 +620,10 @@ export default function ClientsPage() {
                     <p className="text-sm text-gray-400 text-center py-4">No active assets</p>
                   )}
                 </div>
-              </div>
+              </Card>
 
               {/* Content Calendar Preview */}
-              <div className="glass-card p-6">
+              <Card glass className="p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-green-600" />
                   Upcoming
@@ -633,7 +638,7 @@ export default function ClientsPage() {
                         return (
                           <div
                             key={entry.calendar_id || index}
-                            className="p-3 rounded-lg bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-sm transition-all"
+                            className="p-3 rounded-lg bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-sm transition-[transform,opacity,colors,shadow]"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
@@ -659,7 +664,7 @@ export default function ClientsPage() {
                     <p className="text-sm text-gray-400 text-center py-4">No upcoming content</p>
                   )}
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         )}

@@ -7,6 +7,9 @@ import StartShootForm from '../components/StartShootForm';
 import BreakDialog from '../components/BreakDialog';
 import BreakTimer from '../components/BreakTimer';
 import WorkLinksModal from '../components/WorkLinksModal';
+import ModalPortal from '../components/primitives/ModalPortal.jsx';
+import Card from '../components/primitives/Card.jsx';
+import Button from '../components/primitives/Button.jsx';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { Camera, Calendar, MapPin, Clock, User, Play, Square, Coffee, Link as LinkIcon, Plus, Edit, X, Calendar as CalendarIcon, AlertCircle, Trash2 } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
@@ -548,102 +551,84 @@ export default function ShootsPage() {
         type="danger"
       />
 
-      {/* Edit Shoot Modal */}
-      {showEditModal && editingShoot && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-          <div
-            className="fixed inset-0 transition-opacity"
-            style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
+      <ModalPortal
+        id="shoot-edit"
+        isOpen={Boolean(showEditModal && editingShoot)}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingShoot(null);
+        }}
+        title="Edit Shoot"
+        description="Update scheduling details before notifying the team."
+        size="lg"
+        footer={(
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
                 setShowEditModal(false);
                 setEditingShoot(null);
-              }
-            }}
-          />
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh]" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Edit Shoot</h3>
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setEditingShoot(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
+              }}
+            >
+              Cancel
+            </Button>
+            <Button className="flex-1" onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </div>
+        )}
+      >
+        {editingShoot ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Shoot Name *</label>
+              <input
+                type="text"
+                value={editingShoot.shoot_name || editingShoot.title || ''}
+                onChange={(e) => setEditingShoot({ ...editingShoot, shoot_name: e.target.value, title: e.target.value })}
+                required
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              />
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Shoot Name *</label>
-                <input
-                  type="text"
-                  value={editingShoot.shoot_name || editingShoot.title || ''}
-                  onChange={(e) => setEditingShoot({ ...editingShoot, shoot_name: e.target.value, title: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+              <input
+                type="date"
+                value={editingShoot.date || ''}
+                onChange={(e) => setEditingShoot({ ...editingShoot, date: e.target.value })}
+                required
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
-                <input
-                  type="date"
-                  value={editingShoot.date || ''}
-                  onChange={(e) => setEditingShoot({ ...editingShoot, date: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+              <input
+                type="time"
+                value={editingShoot.time || ''}
+                onChange={(e) => setEditingShoot({ ...editingShoot, time: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-                <input
-                  type="time"
-                  value={editingShoot.time || ''}
-                  onChange={(e) => setEditingShoot({ ...editingShoot, time: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <input
-                  type="text"
-                  value={editingShoot.location_name || editingShoot.location || ''}
-                  onChange={(e) => setEditingShoot({ ...editingShoot, location_name: e.target.value, location: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  placeholder="Studio A / Outdoor Location"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingShoot(null);
-                  }}
-                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors"
-                >
-                  Save Changes
-                </button>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+              <input
+                type="text"
+                value={editingShoot.location_name || editingShoot.location || ''}
+                onChange={(e) => setEditingShoot({ ...editingShoot, location_name: e.target.value, location: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+                placeholder="Studio A / Outdoor Location"
+              />
             </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </ModalPortal>
 
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <Card glass className="p-6 rounded-2xl border-l-4 border-primary flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Shoots</h1>
           <p className="text-gray-600">Manage and track photography shoots</p>
@@ -669,11 +654,11 @@ export default function ShootsPage() {
             </button>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Active Shoot Card (for photographers) */}
       {user?.role === ROLES.PHOTOGRAPHER && activeShoot && (
-        <div className={`glass-card p-6 relative overflow-hidden ${activeBreak ? 'border-orange-200' : 'border-primary/20'
+        <Card glass className={`p-6 relative overflow-hidden ${activeBreak ? 'border-orange-200' : 'border-primary/20'
           }`}>
           {/* Background Gradient */}
           <div className={`absolute inset-0 opacity-10 pointer-events-none ${activeBreak
@@ -751,43 +736,45 @@ export default function ShootsPage() {
             {/* Action Buttons */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {!activeBreak ? (
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => setShowBreakDialog(true)}
-                  className="glass-button bg-white text-gray-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 flex items-center justify-center gap-2 py-3"
+                  icon={Coffee}
+                  className="flex items-center justify-center gap-2"
                 >
-                  <Coffee className="w-5 h-5" />
                   Take Break
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   onClick={handleEndBreak}
-                  className="glass-button bg-orange-500 text-white hover:bg-orange-600 border-none flex items-center justify-center gap-2 py-3"
+                  icon={Play}
+                  className="bg-orange-500 hover:bg-orange-600 text-white border-none flex items-center justify-center gap-2"
                 >
-                  <Play className="w-5 h-5" />
                   End Break
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setShowWorkLinks(true)}
-                className="glass-button bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 flex items-center justify-center gap-2 py-3"
+                icon={LinkIcon}
+                className="flex items-center justify-center gap-2"
               >
-                <LinkIcon className="w-5 h-5" />
                 {activeShoot.upload_links ? 'Edit Links' : 'Add Links'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleEndShoot}
-                className="glass-button bg-gray-900 text-white hover:bg-black border-none flex items-center justify-center gap-2 py-3"
+                className="bg-gray-900 hover:bg-black text-white border-none flex items-center justify-center gap-2"
               >
                 <Square className="w-5 h-5" />
                 End Shoot
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Shoots List */}
-      <div className="glass-card p-6">
+      <Card glass className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-primary" />
           {user?.role === ROLES.PHOTOGRAPHER ? 'My Shoots' : 'All Shoots'}
@@ -825,7 +812,7 @@ export default function ShootsPage() {
                 return (
                   <div
                     key={shoot.shoot_id || index}
-                    className="p-4 rounded-xl bg-white border border-gray-100 hover:shadow-md transition-all group"
+                    className="p-4 rounded-xl bg-white border border-gray-100 hover:shadow-md transition-[transform,opacity,colors,shadow] group"
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -935,127 +922,112 @@ export default function ShootsPage() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
-      {/* Assign Shoot Modal */}
-      {showShootAssignment && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-          <div
-            className="fixed inset-0 transition-opacity z-[100]"
-            style={{ background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)' }}
-            onClick={() => setShowShootAssignment(false)}
-          />
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative z-[101] animate-fadeIn overflow-y-auto max-h-[95vh]" style={{ borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Assign Shoot</h3>
-              <button
-                onClick={() => setShowShootAssignment(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAssignShoot} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Shoot Name *</label>
-                <input
-                  type="text"
-                  value={newShoot.shoot_name}
-                  onChange={(e) => setNewShoot({ ...newShoot, shoot_name: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  placeholder="e.g. Product Launch Shoot"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
-                <select
-                  value={newShoot.client_id}
-                  onChange={(e) => setNewShoot({ ...newShoot, client_id: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                >
-                  <option value="">No client (General shoot)</option>
-                  {(Array.isArray(clients) ? clients : []).map(client => (
-                    <option key={client?.client_id} value={client?.client_id}>
-                      {client?.company_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Videographer/Lead *</label>
-                <select
-                  value={newShoot.photographer_id}
-                  onChange={(e) => setNewShoot({ ...newShoot, photographer_id: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                >
-                  <option value="">Select videographer...</option>
-                  {availablePhotographers.map(person => (
-                    <option key={person.email} value={person.email}>
-                      {person.name || person.email} ({person.role === ROLES.LEAD ? 'Lead' : 'Media'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
-                  <input
-                    type="date"
-                    value={newShoot.date}
-                    onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })}
-                    required
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-                  <input
-                    type="time"
-                    value={newShoot.time}
-                    onChange={(e) => setNewShoot({ ...newShoot, time: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <input
-                  type="text"
-                  value={newShoot.location_name}
-                  onChange={(e) => setNewShoot({ ...newShoot, location_name: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  placeholder="e.g. Studio A"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowShootAssignment(false)}
-                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingShoot}
-                  className="flex-1 px-4 py-3 text-white bg-primary rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50"
-                >
-                  {isCreatingShoot ? 'Assigning...' : 'Assign Shoot'}
-                </button>
-              </div>
-            </form>
+      <ModalPortal
+        id="assign-shoot"
+        isOpen={showShootAssignment}
+        onClose={() => setShowShootAssignment(false)}
+        title="Assign Shoot"
+        description="Create a shoot assignment and notify the selected lead."
+        size="lg"
+        footer={null}
+      >
+        <form onSubmit={handleAssignShoot} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Shoot Name *</label>
+            <input
+              type="text"
+              value={newShoot.shoot_name}
+              onChange={(e) => setNewShoot({ ...newShoot, shoot_name: e.target.value })}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              placeholder="e.g. Product Launch Shoot"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
+            <select
+              value={newShoot.client_id}
+              onChange={(e) => setNewShoot({ ...newShoot, client_id: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            >
+              <option value="">No client (General shoot)</option>
+              {(Array.isArray(clients) ? clients : []).map(client => (
+                <option key={client?.client_id} value={client?.client_id}>
+                  {client?.company_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Videographer/Lead *</label>
+            <select
+              value={newShoot.photographer_id}
+              onChange={(e) => setNewShoot({ ...newShoot, photographer_id: e.target.value })}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+            >
+              <option value="">Select videographer...</option>
+              {availablePhotographers.map(person => (
+                <option key={person.email} value={person.email}>
+                  {person.name || person.email} ({person.role === ROLES.LEAD ? 'Lead' : 'Media'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+              <input
+                type="date"
+                value={newShoot.date}
+                onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })}
+                required
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+              <input
+                type="time"
+                value={newShoot.time}
+                onChange={(e) => setNewShoot({ ...newShoot, time: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+            <input
+              type="text"
+              value={newShoot.location_name}
+              onChange={(e) => setNewShoot({ ...newShoot, location_name: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-[transform,opacity,colors,shadow]"
+              placeholder="e.g. Studio A"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowShootAssignment(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isCreatingShoot} className="flex-1">
+              {isCreatingShoot ? 'Assigning...' : 'Assign Shoot'}
+            </Button>
+          </div>
+        </form>
+      </ModalPortal>
     </div>
   );
 }

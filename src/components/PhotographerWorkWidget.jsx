@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import Card from './primitives/Card.jsx';
 import { Camera, Save, Edit2, X } from 'lucide-react';
 
 export default function PhotographerWorkWidget({
@@ -52,7 +53,7 @@ export default function PhotographerWorkWidget({
   }
 
   return (
-    <div className={`glass-card p-4 ${className}`}>
+    <Card glass className={`p-4 ${className}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Camera className="w-4 h-4 text-primary" />
@@ -77,7 +78,7 @@ export default function PhotographerWorkWidget({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Describe what you're working on... (e.g., 'Shooting product photos for client X', 'Location scouting for shoot Y', 'Setting up lighting for portrait session')"
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none outline-none transition-all"
+            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none outline-none transition-[transform,opacity,colors,shadow]"
             rows={3}
             disabled={isSaving}
           />
@@ -120,6 +121,6 @@ export default function PhotographerWorkWidget({
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

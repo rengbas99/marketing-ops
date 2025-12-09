@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
+import OverlayMount from './overlay/OverlayMount.jsx';
+import Card from './primitives/Card.jsx';
 
 const ToastContext = createContext();
 
@@ -31,14 +33,22 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ success, error, warning, info, showToast }}>
       {children}
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <OverlayMount
+        id="toast-stack"
+        isOpen={toasts.length > 0}
+        type="toast"
+        blocking={false}
+        priority={100}
+        pointerEvents="none"
+        render={() => <ToastContainer toasts={toasts} removeToast={removeToast} />}
+      />
     </ToastContext.Provider>
   );
 }
 
 function ToastContainer({ toasts, removeToast }) {
   return (
-    <div className="fixed top-6 right-6 z-[100] space-y-3 max-w-md w-full pointer-events-none">
+    <div className="space-y-3 max-w-md w-full pointer-events-none">
       {toasts.map(toast => (
         <Toast key={toast.id} toast={toast} removeToast={removeToast} />
       ))}
@@ -49,7 +59,7 @@ function ToastContainer({ toasts, removeToast }) {
 function Toast({ toast, removeToast }) {
   const { message, type } = toast;
 
-  const getIcon = () => {
+  const icon = useMemo(() => {
     switch (type) {
       case 'success':
         return <CheckCircle className="w-6 h-6 text-green-500" />;
@@ -60,28 +70,29 @@ function Toast({ toast, removeToast }) {
       default:
         return <Info className="w-6 h-6 text-blue-500" />;
     }
-  };
+  }, [type]);
 
-  const getStyles = () => {
+  const tone = useMemo(() => {
     switch (type) {
       case 'success':
-        return 'bg-white/95 border-green-500/20 shadow-green-500/10';
+        return 'border-green-100';
       case 'error':
-        return 'bg-white/95 border-red-500/20 shadow-red-500/10';
+        return 'border-red-100';
       case 'warning':
-        return 'bg-white/95 border-yellow-500/20 shadow-yellow-500/10';
+        return 'border-yellow-100';
       default:
-        return 'bg-white/95 border-blue-500/20 shadow-blue-500/10';
+        return 'border-blue-100';
     }
-  };
+  }, [type]);
 
   return (
-    <div
-      className={`${getStyles()} border backdrop-blur-md rounded-xl shadow-xl p-4 flex items-start gap-4 animate-slideIn pointer-events-auto transform transition-all hover:scale-[1.02]`}
+    <Card
+      elevation="sm"
+      className={`flex items-start gap-4 pointer-events-auto animate-overlay-slide ${tone}`}
       role="alert"
     >
       <div className="flex-shrink-0 mt-0.5">
-        {getIcon()}
+        {icon}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-gray-900 leading-snug">{message}</p>
@@ -93,7 +104,7 @@ function Toast({ toast, removeToast }) {
       >
         <X className="w-4 h-4" />
       </button>
-    </div>
+    </Card>
   );
 }
 

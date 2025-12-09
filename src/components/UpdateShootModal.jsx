@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
-import { X, Save, Calendar, MapPin, User, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useId } from 'react';
+import { Save, Calendar, MapPin, User } from 'lucide-react';
 import { SHOOT_STATUS } from '../constants';
+import OverlayMount from './overlay/OverlayMount.jsx';
+import Modal from './primitives/Modal.jsx';
+import Button from './primitives/Button.jsx';
 
 export default function UpdateShootModal({ shoot, users, clients, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
@@ -52,42 +55,45 @@ export default function UpdateShootModal({ shoot, users, clients, onClose, onUpd
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async (event, handleClose) => {
+    event.preventDefault();
     if (!validate()) return;
 
     setIsSaving(true);
     try {
       await onUpdate({
         ...formData,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
-      onClose();
+      handleClose();
     } catch (err) {
       console.error('Error updating shoot:', err);
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [formData, onUpdate, validate]);
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="fixed inset-0" style={{ background: 'rgba(0, 0, 0, 0.25)', backdropFilter: 'blur(6px)' }} onClick={onClose} />
-      <div className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative z-[10000] bg-white rounded-2xl" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Update Shoot</h2>
-            <p className="text-sm text-gray-500 mt-1">Modify shoot details and assignments</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
+  const overlayId = useId();
+  const isOpen = Boolean(shoot);
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+  const renderOverlay = useCallback(({ close }) => {
+    const handleClose = () => {
+      close();
+      onClose?.();
+    };
+
+    if (!shoot) return null;
+
+    return (
+      <Modal
+        title="Update Shoot"
+        description="Modify shoot details and assignments."
+        onClose={handleClose}
+        size="lg"
+        preventCloseOnBackdrop={false}
+        footer={null}
+      >
+        <form onSubmit={(event) => handleSubmit(event, handleClose)} className="space-y-4">
           {/* Shoot Name */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -214,33 +220,33 @@ export default function UpdateShootModal({ shoot, users, clients, onClose, onUpd
             />
           </div>
 
-          {/* Actions */}
           <div className="flex gap-4 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-            >
+            <Button variant="secondary" type="button" className="flex-1" onClick={handleClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isSaving ? (
-                'Saving...'
-              ) : (
+            </Button>
+            <Button type="submit" disabled={isSaving} className="flex-1 gap-2">
+              {isSaving ? 'Saving...' : (
                 <>
                   <Save className="w-4 h-4" />
                   Update Shoot
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
+    );
+  }, [clients, errors, formData, handleSubmit, isSaving, onClose, photographers, shoot]);
+
+  return (
+    <OverlayMount
+      id={`update-shoot-${overlayId}`}
+      isOpen={isOpen}
+      type="modal"
+      blocking
+      priority={25}
+      render={renderOverlay}
+    />
   );
 }
 
