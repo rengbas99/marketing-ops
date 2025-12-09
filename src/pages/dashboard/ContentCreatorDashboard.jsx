@@ -7,7 +7,7 @@ import BreakDialog from '../../components/BreakDialog';
 import BreakTimer from '../../components/BreakTimer';
 import { Clock, Calendar, MessageSquare, FileText, LogIn, LogOut, Coffee, Play, Camera, Plane } from 'lucide-react';
 import { COLLECTIONS, ASSET_STATUS } from '../../constants';
-import { canClockIn } from '../../utils/attendanceUtils';
+import { shouldAutoClockOut, findStaleClockIns, canClockIn } from '../../utils/attendanceUtils';
 import Card from '../../components/primitives/Card.jsx';
 import ModalPortal from '../../components/primitives/ModalPortal.jsx';
 import Button from '../../components/primitives/Button.jsx';
@@ -74,12 +74,73 @@ export default function ContentCreatorDashboard() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
+    const normalizedEmail = (user?.email || '').trim();
     const todayAtt = attendance.find(
-      a => a && a.employee_id === user?.email && a.date === today
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
     );
+
+    // Check if today's attendance should be auto clocked out (over 15 hours)
+    if (todayAtt && shouldAutoClockOut(todayAtt)) {
+      const staleIndex = attendance.findIndex(a => a && a.attendance_id === todayAtt.attendance_id);
+      if (staleIndex !== -1) {
+        const clockOutTime = new Date().toISOString();
+        const clockInTime = new Date(todayAtt.clock_in);
+        const totalMinutes = (new Date(clockOutTime) - clockInTime) / (1000 * 60);
+        const breakMinutes = parseFloat(todayAtt.total_break_duration || 0);
+        const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+        const hoursWorked = workMinutes / 60;
+
+        updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+          ...todayAtt,
+          clock_out: clockOutTime,
+          status: 'clocked_out',
+          hours_worked: hoursWorked.toFixed(2),
+          daily_report: todayAtt.daily_report || 'Auto clocked out after 15 hours',
+        }).then(() => {
+          forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
+        }).catch(console.error);
+
+        setClockedIn(false);
+        setTodayAttendance(null);
+        return;
+      }
+    }
+
+    // Auto clock-out all stale records (not just today's)
+    const staleRecords = findStaleClockIns(attendance.filter(
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail
+    ));
+    
+    if (staleRecords.length > 0) {
+      staleRecords.forEach(record => {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === record.attendance_id);
+        if (staleIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTime = new Date(record.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTime) / (1000 * 60);
+          const breakMinutes = parseFloat(record.total_break_duration || 0);
+          const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hoursWorked = workMinutes / 60;
+
+          updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+            ...record,
+            clock_out: clockOutTime,
+            status: 'clocked_out',
+            hours_worked: hoursWorked.toFixed(2),
+            daily_report: record.daily_report || 'Auto clocked out after 15 hours',
+          }).catch(console.error);
+        }
+      });
+      
+      if (staleRecords.length > 0) {
+        forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
+      }
+    }
+
     setTodayAttendance(todayAtt);
-    setClockedIn(todayAtt && todayAtt.status === 'clocked_in');
-  }, [data, user, attendance]);
+    setClockedIn(todayAtt && todayAtt.clock_in && !todayAtt.clock_out && 
+      (todayAtt.status === 'clocked_in' || !todayAtt.status || todayAtt.status === ''));
+  }, [data, user, attendance, updateRow, forceRefresh]);
 
   useEffect(() => {
     if (!clockedIn || !todayAttendance) {
@@ -121,7 +182,8 @@ export default function ContentCreatorDashboard() {
 
       setElapsedTime({ hours, minutes, seconds });
 
-      if (hours >= 12) {
+      // Auto clock-out after 15 hours (matching attendanceUtils)
+      if (hours >= 15) {
         handleClockOut().catch(console.error);
       }
     };
@@ -150,84 +212,78 @@ export default function ContentCreatorDashboard() {
       const clockInTime = new Date().toISOString();
       const today = new Date().toISOString().split('T')[0];
 
-      // Use utility function to check if can clock in (like other dashboards)
-      const { canClockIn: canClockInCheck, reason, existingRecord } = canClockIn(attendance, user?.email, today);
+      // Use utility function to check if can clock in (prevents multiple sessions on same day)
+      const clockInCheck = canClockIn(attendance, user?.email, today);
       
-      if (!canClockInCheck && reason === 'already_clocked_in') {
-        error('You already have an active clock-in session. Please clock out first.');
+      if (!clockInCheck.canClockIn && clockInCheck.reason === 'already_clocked_in') {
+        error('You already have an active clock-in session for today. Please clock out first before starting a new session.');
         setIsClockInLoading(false);
         return;
       }
 
       // If there's a stale record that needs auto clock-out, do it first
-      if (reason === 'auto_clockout_needed' && existingRecord) {
-        const staleIndex = attendance.findIndex(a => a && a.attendance_id === existingRecord.attendance_id);
+      if (clockInCheck.reason === 'auto_clockout_needed' && clockInCheck.existingRecord) {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === clockInCheck.existingRecord.attendance_id);
         if (staleIndex !== -1) {
           const clockOutTime = new Date().toISOString();
-          const clockInTimeStale = new Date(existingRecord.clock_in);
+          const clockInTimeStale = new Date(clockInCheck.existingRecord.clock_in);
           const totalMinutes = (new Date(clockOutTime) - clockInTimeStale) / (1000 * 60);
-          const hoursWorked = totalMinutes / 60;
+          const breakMinutes = parseFloat(clockInCheck.existingRecord.total_break_duration || 0);
+          const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hoursWorked = workMinutes / 60;
           
           await updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
-            ...existingRecord,
+            ...clockInCheck.existingRecord,
             clock_out: clockOutTime,
             status: 'clocked_out',
             hours_worked: hoursWorked.toFixed(2),
-            daily_report: existingRecord.daily_report || 'Auto clocked out after 15 hours',
+            daily_report: clockInCheck.existingRecord.daily_report || 'Auto clocked out after 15 hours',
           });
           await forceRefresh([COLLECTIONS.ATTENDANCE]);
         }
       }
 
-      const existingAttendance = attendance.find(
-        a => a && a.employee_id === user?.email && a.date === today
+      // Check if there's an ACTIVE clock-in (not just any record)
+      // This prevents overwriting previous clock-in/clock-out data
+      const normalizedEmail = (user?.email || '').trim();
+      const activeClockIn = attendance.find(
+        a => a && 
+             a.employee_id && 
+             a.employee_id.trim() === normalizedEmail && 
+             a.date === today &&
+             a.clock_in &&
+             !a.clock_out &&
+             (a.status === 'clocked_in' || !a.status || a.status === '')
       );
 
-      if (existingAttendance) {
-        const attIndex = attendance.findIndex(
-          a => a && a.attendance_id === existingAttendance.attendance_id
-        );
-
-        if (attIndex !== -1) {
-          await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
-            ...existingAttendance,
-            clock_in: clockInTime,
-            clock_out: null,
-            status: 'clocked_in',
-            hours_worked: null,
-          });
-
-          const updatedAttendance = {
-            ...existingAttendance,
-            clock_in: clockInTime,
-            clock_out: null,
-            status: 'clocked_in',
-            hours_worked: null,
-          };
-          setTodayAttendance(updatedAttendance);
-          setClockedIn(true);
-        }
-      } else {
-        await addRow(COLLECTIONS.ATTENDANCE, {
-          attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
-          date: today,
-          clock_in: clockInTime,
-          status: 'clocked_in',
-          created_at: clockInTime,
-        });
-
-        const newAttendance = {
-          attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
-          date: today,
-          clock_in: clockInTime,
-          status: 'clocked_in',
-          created_at: clockInTime,
-        };
-        setTodayAttendance(newAttendance);
-        setClockedIn(true);
+      if (activeClockIn) {
+        error('You already have an active clock-in session for today. Please clock out first before starting a new session.');
+        setIsClockInLoading(false);
+        return;
       }
+
+      // Always create a NEW record for a new clock-in session (don't overwrite existing records)
+      // This preserves previous clock-in/clock-out data for the same day
+      const normalizedEmailForNew = (user.email || '').trim();
+      await addRow(COLLECTIONS.ATTENDANCE, {
+        attendance_id: `ATT-${Date.now()}`,
+        employee_id: normalizedEmailForNew,
+        date: today,
+        clock_in: clockInTime,
+        status: 'clocked_in',
+        created_at: clockInTime,
+      });
+
+      const newAttendance = {
+        attendance_id: `ATT-${Date.now()}`,
+        employee_id: normalizedEmailForNew,
+        date: today,
+        clock_in: clockInTime,
+        status: 'clocked_in',
+        created_at: clockInTime,
+      };
+      setTodayAttendance(newAttendance);
+      setClockedIn(true);
 
       if (selectedTask) {
         const existingLog = timeLogs.find(
@@ -335,7 +391,7 @@ export default function ContentCreatorDashboard() {
         setIsClockOutLoading(false);
         return;
       }
-      
+
       if (index !== -1) {
         await updateRow(COLLECTIONS.ATTENDANCE, index + 2, {
           ...todayAttendance,

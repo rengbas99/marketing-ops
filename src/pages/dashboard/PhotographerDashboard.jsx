@@ -9,6 +9,7 @@ import PhotographerWorkWidget from '../../components/PhotographerWorkWidget';
 import { Camera, Clock, MapPin, Calendar, LogIn, LogOut, Coffee, CheckCircle, Plane } from 'lucide-react';
 import { formatBreakDuration } from '../../utils/timeFormatting';
 import { COLLECTIONS, SHOOT_STATUS } from '../../constants';
+import { canClockIn } from '../../utils/attendanceUtils';
 import Card from '../../components/primitives/Card.jsx';
 import Button from '../../components/primitives/Button.jsx';
 import ModalPortal from '../../components/primitives/ModalPortal.jsx';
@@ -50,11 +51,13 @@ export default function PhotographerDashboard() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
+    const normalizedEmail = (user?.email || '').trim();
     const todayAtt = attendance.find(
-      a => a && a.employee_id === user?.email && a.date === today
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
     );
     setTodayAttendance(todayAtt);
-    setClockedIn(todayAtt && todayAtt.status === 'clocked_in');
+    setClockedIn(todayAtt && todayAtt.clock_in && !todayAtt.clock_out && 
+      (todayAtt.status === 'clocked_in' || !todayAtt.status || todayAtt.status === ''));
   }, [data, user, attendance]);
 
   useEffect(() => {
@@ -155,55 +158,78 @@ export default function PhotographerDashboard() {
       const clockInTime = new Date().toISOString();
       const today = new Date().toISOString().split('T')[0];
 
-      const existingAttendance = attendance.find(
-        a => a && a.employee_id === user?.email && a.date === today
+      // Use utility function to check if can clock in (prevents multiple sessions on same day)
+      const clockInCheck = canClockIn(attendance, user?.email, today);
+      
+      if (!clockInCheck.canClockIn && clockInCheck.reason === 'already_clocked_in') {
+        error('You already have an active clock-in session for today. Please clock out first before starting a new session.');
+        setIsClockInLoading(false);
+        return;
+      }
+
+      // If there's a stale record that needs auto clock-out, do it first
+      if (clockInCheck.reason === 'auto_clockout_needed' && clockInCheck.existingRecord) {
+        const staleIndex = attendance.findIndex(a => a && a.attendance_id === clockInCheck.existingRecord.attendance_id);
+        if (staleIndex !== -1) {
+          const clockOutTime = new Date().toISOString();
+          const clockInTimeStale = new Date(clockInCheck.existingRecord.clock_in);
+          const totalMinutes = (new Date(clockOutTime) - clockInTimeStale) / (1000 * 60);
+          const breakMinutes = parseFloat(clockInCheck.existingRecord.total_break_duration || 0);
+          const workMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hoursWorked = workMinutes / 60;
+          
+          await updateRow(COLLECTIONS.ATTENDANCE, staleIndex + 2, {
+            ...clockInCheck.existingRecord,
+            clock_out: clockOutTime,
+            status: 'clocked_out',
+            hours_worked: hoursWorked.toFixed(2),
+            daily_report: clockInCheck.existingRecord.daily_report || 'Auto clocked out after 15 hours',
+          });
+          await forceRefresh([COLLECTIONS.ATTENDANCE]);
+        }
+      }
+
+      // Check if there's an ACTIVE clock-in (not just any record)
+      // This prevents overwriting previous clock-in/clock-out data
+      const normalizedEmail = (user?.email || '').trim();
+      const activeClockIn = attendance.find(
+        a => a && 
+             a.employee_id && 
+             a.employee_id.trim() === normalizedEmail && 
+             a.date === today &&
+             a.clock_in &&
+             !a.clock_out &&
+             (a.status === 'clocked_in' || !a.status || a.status === '')
       );
 
-      if (existingAttendance) {
-        const attIndex = attendance.findIndex(
-          a => a && a.attendance_id === existingAttendance.attendance_id
-        );
-
-        if (attIndex !== -1) {
-          await updateRow(COLLECTIONS.ATTENDANCE, attIndex + 2, {
-            ...existingAttendance,
-            clock_in: clockInTime,
-            clock_out: null,
-            status: 'clocked_in',
-            hours_worked: null,
-          });
-
-          const updatedAttendance = {
-            ...existingAttendance,
-            clock_in: clockInTime,
-            clock_out: null,
-            status: 'clocked_in',
-            hours_worked: null,
-          };
-          setTodayAttendance(updatedAttendance);
-          setClockedIn(true);
-        }
-      } else {
-        await addRow(COLLECTIONS.ATTENDANCE, {
-          attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
-          date: today,
-          clock_in: clockInTime,
-          status: 'clocked_in',
-          created_at: clockInTime,
-        });
-
-        const newAttendance = {
-          attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
-          date: today,
-          clock_in: clockInTime,
-          status: 'clocked_in',
-          created_at: clockInTime,
-        };
-        setTodayAttendance(newAttendance);
-        setClockedIn(true);
+      if (activeClockIn) {
+        error('You already have an active clock-in session for today. Please clock out first before starting a new session.');
+        setIsClockInLoading(false);
+        return;
       }
+
+      // Always create a NEW record for a new clock-in session (don't overwrite existing records)
+      // This preserves previous clock-in/clock-out data for the same day
+      const normalizedEmailForNew = (user.email || '').trim();
+      await addRow(COLLECTIONS.ATTENDANCE, {
+        attendance_id: `ATT-${Date.now()}`,
+        employee_id: normalizedEmailForNew,
+        date: today,
+        clock_in: clockInTime,
+        status: 'clocked_in',
+        created_at: clockInTime,
+      });
+
+      const newAttendance = {
+        attendance_id: `ATT-${Date.now()}`,
+        employee_id: normalizedEmailForNew,
+        date: today,
+        clock_in: clockInTime,
+        status: 'clocked_in',
+        created_at: clockInTime,
+      };
+      setTodayAttendance(newAttendance);
+      setClockedIn(true);
 
       const shootId = selectedShoot || 'GENERAL';
 

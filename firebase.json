@@ -14,7 +14,7 @@
     ],
     "headers": [
       {
-        "source": "**/*.@(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)",
+        "source": "/assets/**",
         "headers": [
           {
             "key": "Cache-Control",
@@ -23,11 +23,38 @@
         ]
       },
       {
+        "source": "**/*.@(js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "**/*.@(html|json)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=0, must-revalidate"
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
           }
         ]
       }

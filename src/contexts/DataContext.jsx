@@ -604,7 +604,40 @@ export function DataProvider({ children }) {
             throw new Error(`Cannot update ${sheetName}: no document ID found. Row data: ${JSON.stringify(previousData).substring(0, 100)}`);
           }
         } else {
-          throw new Error(`Cannot update ${sheetName}: row not found at index ${actualIndex}`);
+          // Fallback: Index lookup failed - try using unique identifier from validatedData
+          // This handles cases where array length/order doesn't match (e.g., Alan's records at high indices)
+          const idField = validatedData.attendance_id || validatedData.log_id || 
+                          validatedData.asset_id || validatedData.shoot_id || 
+                          validatedData.client_id || validatedData.break_id;
+          
+          if (idField) {
+            // Find the record in current state by unique identifier
+            const currentSheet = Array.isArray(data[sheetName]) ? data[sheetName] : [];
+            const recordByID = currentSheet.find(record => {
+              if (!record) return false;
+              return record.attendance_id === idField || 
+                     record.log_id === idField || 
+                     record.asset_id === idField ||
+                     record.shoot_id === idField ||
+                     record.client_id === idField ||
+                     record.break_id === idField;
+            });
+            
+            if (recordByID) {
+              const foundDocId = recordByID.id || recordByID._id;
+              if (foundDocId) {
+                await updateDocument(sheetName, foundDocId, validatedData);
+              } else {
+                // Use the unique identifier as document ID
+                await updateDocument(sheetName, idField, validatedData);
+              }
+            } else {
+              // Last resort: use the unique identifier directly as document ID
+              await updateDocument(sheetName, idField, validatedData);
+            }
+          } else {
+            throw new Error(`Cannot update ${sheetName}: row not found at index ${actualIndex} and no unique identifier found in update data`);
+          }
         }
 
         // STEP 2: Queue Sheets write (BACKUP - async, delayed)

@@ -10,7 +10,7 @@ import Card from '../components/primitives/Card.jsx';
 import { Clock, Calendar, TrendingUp, User, LogIn, LogOut, Edit2, X, ChevronLeft, ChevronRight, BarChart3, CheckCircle, FileText, Eye, ArrowRight } from 'lucide-react';
 import { formatBreakDuration } from '../utils/timeFormatting';
 import { COLLECTIONS, ROLES } from '../constants';
-import { canClockIn, findDuplicateClockIns, findStaleClockIns, shouldAutoClockOut } from '../utils/attendanceUtils';
+import { canClockIn, findDuplicateClockIns, findStaleClockIns, shouldAutoClockOut, applyClockOutTimes, autoClockOutStaleRecords } from '../utils/attendanceUtils';
 
 export default function AttendancePage() {
   const navigate = useNavigate();
@@ -56,6 +56,7 @@ export default function AttendancePage() {
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [isApplyingClockOut, setIsApplyingClockOut] = useState(false);
   const [activeBreak, setActiveBreak] = useState(null);
   const [showClockOutReport, setShowClockOutReport] = useState(false);
   const [clockOutReport, setClockOutReport] = useState('');
@@ -141,8 +142,9 @@ export default function AttendancePage() {
       forceRefresh([COLLECTIONS.ATTENDANCE]).catch(console.error);
     }
 
+    const normalizedEmail = (user?.email || '').trim();
     const todayAtt = attendance.find(
-      a => a && a.employee_id === user?.email && a.date === today
+      a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
     );
     
     // Check if the found attendance should be auto clocked out
@@ -251,8 +253,9 @@ export default function AttendancePage() {
         }
       }
 
+      const normalizedEmail = (user?.email || '').trim();
       const existingAttendance = attendance.find(
-        a => a && a.employee_id === user?.email && a.date === today
+        a => a && a.employee_id && a.employee_id.trim() === normalizedEmail && a.date === today
       );
 
       if (existingAttendance) {
@@ -280,9 +283,10 @@ export default function AttendancePage() {
           setClockedIn(true);
         }
       } else {
+        const normalizedEmail = (user.email || '').trim();
         await addRow(COLLECTIONS.ATTENDANCE, {
           attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
+          employee_id: normalizedEmail,
           date: today,
           clock_in: clockInTime,
           status: 'clocked_in',
@@ -291,7 +295,7 @@ export default function AttendancePage() {
 
         const newAttendance = {
           attendance_id: `ATT-${Date.now()}`,
-          employee_id: user.email,
+          employee_id: normalizedEmail,
           date: today,
           clock_in: clockInTime,
           status: 'clocked_in',
@@ -480,12 +484,29 @@ export default function AttendancePage() {
           return;
         }
 
-        await updateRow(COLLECTIONS.ATTENDANCE, index + 2, {
+        // Build update object, ensuring no undefined values
+        const updateData = {
           ...editingAttendance,
-          clock_out: clockOutTime ? clockOutTime.toISOString() : editingAttendance.clock_out,
           status: 'clocked_out',
           hours_worked: hoursWorkedExcludingBreaks.toFixed(2),
+        };
+        
+        // Only set clock_out if we have a valid value
+        if (clockOutTime) {
+          updateData.clock_out = clockOutTime.toISOString();
+        } else if (editingAttendance.clock_out) {
+          updateData.clock_out = editingAttendance.clock_out;
+        }
+        // If neither exists, don't include clock_out (or set to null if field must exist)
+        
+        // Remove any undefined values before updating
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] === undefined) {
+            delete updateData[key];
+          }
         });
+        
+        await updateRow(COLLECTIONS.ATTENDANCE, index + 2, updateData);
 
         await forceRefresh([COLLECTIONS.ATTENDANCE]);
         setEditingAttendance(null);
@@ -500,6 +521,68 @@ export default function AttendancePage() {
       error('Error updating attendance: ' + errorMsg);
     } finally {
       setIsEditLoading(false);
+    }
+  };
+
+  // Apply clock-out times for missing records (for managers/leads)
+  const handleApplyClockOutTimes = async (employeeEmail = null, month = null) => {
+    if (!canEditAttendance) {
+      error('Only managers and leads can apply clock-out times');
+      return;
+    }
+
+    setIsApplyingClockOut(true);
+    try {
+      const result = await applyClockOutTimes(attendance, {
+        employeeEmail,
+        month,
+        updateRow,
+        forceRefresh,
+        collection: COLLECTIONS.ATTENDANCE,
+        defaultClockOutHour: 17
+      });
+
+      if (result.updated > 0) {
+        success(`Successfully applied clock-out times to ${result.updated} record(s). ${result.errors > 0 ? `${result.errors} error(s) occurred.` : ''}`);
+      } else if (result.errors > 0) {
+        error(`Failed to apply clock-out times. ${result.errors} error(s) occurred.`);
+      } else {
+        success('No records found that need clock-out times applied.');
+      }
+    } catch (err) {
+      error('Error applying clock-out times: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsApplyingClockOut(false);
+    }
+  };
+
+  // Auto clock-out all stale records (over 15 hours)
+  const handleAutoClockOutStale = async () => {
+    if (!canEditAttendance) {
+      error('Only managers and leads can auto clock-out stale records');
+      return;
+    }
+
+    setIsApplyingClockOut(true);
+    try {
+      const result = await autoClockOutStaleRecords(
+        attendance,
+        updateRow,
+        forceRefresh,
+        COLLECTIONS.ATTENDANCE
+      );
+
+      if (result.updated > 0) {
+        success(`Successfully auto clocked-out ${result.updated} stale record(s). ${result.errors > 0 ? `${result.errors} error(s) occurred.` : ''}`);
+      } else if (result.errors > 0) {
+        error(`Failed to auto clock-out stale records. ${result.errors} error(s) occurred.`);
+      } else {
+        success('No stale records found.');
+      }
+    } catch (err) {
+      error('Error auto clocking-out stale records: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsApplyingClockOut(false);
     }
   };
 
@@ -597,9 +680,10 @@ export default function AttendancePage() {
     monthEnd.setMonth(monthEnd.getMonth() + 1);
     monthEnd.setDate(0);
 
+    const normalizedEmail = (employeeEmail || '').trim();
     const dailyHours = attendance
       .filter(a => {
-        if (!a || a.employee_id !== employeeEmail || a.status !== 'clocked_out') return false;
+        if (!a || !a.employee_id || a.employee_id.trim() !== normalizedEmail || a.status !== 'clocked_out') return false;
         const date = getRecordDate(a);
         return date && date >= monthStart && date <= monthEnd;
       })
@@ -678,7 +762,80 @@ export default function AttendancePage() {
     return [];
   };
 
-  const usersToDisplay = getUsersToDisplay();
+  const usersToDisplayRaw = getUsersToDisplay();
+  
+  // Helper to check if user has active clock-in today (with proper date handling)
+  const today = new Date().toISOString().split('T')[0];
+  const hasActiveClockIn = (userEmail) => {
+    const userRecords = attendance.filter(att => {
+      if (!att || !att.employee_id) return false;
+      if (att.employee_id.trim() !== userEmail.trim()) return false;
+      
+      // Check date field first (it's usually a string like "2025-12-02")
+      let recordDateStr = null;
+      if (att.date) {
+        if (typeof att.date === 'string') {
+          recordDateStr = att.date.split('T')[0]; // Handle "2025-12-02" or "2025-12-02T..."
+        } else if (att.date instanceof Date) {
+          recordDateStr = att.date.toISOString().split('T')[0];
+        }
+      }
+      
+      // Fallback to clock_in if date field not available
+      if (!recordDateStr && att.clock_in) {
+        const clockInDate = new Date(att.clock_in);
+        if (!isNaN(clockInDate.getTime())) {
+          recordDateStr = clockInDate.toISOString().split('T')[0];
+        }
+      }
+      
+      // Fallback to getRecordDate if both above fail
+      if (!recordDateStr) {
+        const recordDate = getRecordDate(att);
+        if (recordDate) {
+          recordDateStr = recordDate instanceof Date 
+            ? recordDate.toISOString().split('T')[0] 
+            : String(recordDate).split('T')[0];
+        }
+      }
+      
+      return recordDateStr === today;
+    });
+    
+    return userRecords.some(att => {
+      if (!att.clock_in || att.clock_out) return false;
+      const status = att.status;
+      return status === 'clocked_in' || status === undefined || status === null || status === '';
+    });
+  };
+  
+  // Group users into active and non-active
+  const activeUsers = usersToDisplayRaw.filter(u => {
+    const isActive = hasActiveClockIn(u.email);
+    // Debug logging for Alan
+    if (u.email && u.email.includes('Alan')) {
+      console.log(`[DEBUG] ${u.email} - Active: ${isActive}`, {
+        email: u.email,
+        today,
+        records: attendance.filter(a => a && a.employee_id && a.employee_id.trim() === u.email.trim())
+      });
+    }
+    return isActive;
+  });
+  const inactiveUsers = usersToDisplayRaw.filter(u => !hasActiveClockIn(u.email));
+  
+  // Sort each group alphabetically
+  activeUsers.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  inactiveUsers.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  
+  // Combine: active first, then inactive
+  const usersToDisplay = [...activeUsers, ...inactiveUsers];
+  
+  // Debug logging
+  if (viewMode === 'team') {
+    console.log('[DEBUG] Team View - Active Users:', activeUsers.map(u => u.email));
+    console.log('[DEBUG] Team View - Inactive Users:', inactiveUsers.map(u => u.email));
+  }
 
   if (loading.all) {
     return (
@@ -711,7 +868,7 @@ export default function AttendancePage() {
 
         {/* View Mode Toggle */}
         {canViewTeam && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {viewMode === 'personal' ? (
               // Personal view: Show button to go back to team view
               <>
@@ -778,6 +935,25 @@ export default function AttendancePage() {
                   <FileText className="w-4 h-4" />
                   Daily Reports
                 </button>
+                {/* Utility buttons for managers/leads */}
+                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                  <button
+                    onClick={() => handleApplyClockOutTimes('Alan@reformmedia.co.uk', '2024-12')}
+                    disabled={isApplyingClockOut}
+                    className="px-3 py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Apply clock-out times for Alan's December records"
+                  >
+                    {isApplyingClockOut ? 'Applying...' : 'Fix Alan Dec'}
+                  </button>
+                  <button
+                    onClick={handleAutoClockOutStale}
+                    disabled={isApplyingClockOut}
+                    className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Auto clock-out all records over 15 hours"
+                  >
+                    {isApplyingClockOut ? 'Processing...' : 'Auto Clock-Out Stale'}
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -922,9 +1098,10 @@ export default function AttendancePage() {
       {/* Attendance Summary */}
       <div className="space-y-6">
         {usersToDisplay.map((displayUser, userIndex) => {
-    const monthlyHours = calculateMonthlyHours(displayUser.email, selectedMonth);
+          const monthlyHours = calculateMonthlyHours(displayUser.email, selectedMonth);
+          const normalizedUserEmail = (displayUser.email || '').trim();
           const userAttendance = attendance.filter(
-            a => a && a.employee_id === displayUser.email
+            a => a && a.employee_id && a.employee_id.trim() === normalizedUserEmail
           );
 
           const monthStart = new Date(selectedMonth + '-01');
@@ -943,20 +1120,79 @@ export default function AttendancePage() {
             return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
           });
 
+          // Check if this is the first inactive user (to add separator)
+          const isFirstInactive = userIndex === activeUsers.length && inactiveUsers.length > 0;
+          const isActive = activeUsers.some(u => u.email === displayUser.email);
+
           return (
-            <Card
-              key={displayUser.email || userIndex}
-              glass
-              className="p-6 animate-fadeIn"
-              style={{ animationDelay: `${userIndex * 0.1}s` }}
-            >
+            <>
+              {/* Separator bar between active and inactive users */}
+              {isFirstInactive && (
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t-2 border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white dark:bg-gray-900 px-4 text-sm font-bold text-gray-500 uppercase tracking-wider">
+                      Not Currently Working
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <Card
+                key={displayUser.email || userIndex}
+                glass
+                className="p-6 animate-fadeIn"
+                style={{ animationDelay: `${userIndex * 0.1}s` }}
+              >
               {/* User Header */}
               {(() => {
-                // Check if user is currently clocked in
+                // Check if user is currently clocked in (using same logic as LeadAttendanceDashboard)
                 const today = new Date().toISOString().split('T')[0];
-                const isCurrentlyClockedIn = attendance.some(
-                  a => a && a.employee_id === displayUser.email && a.date === today && a.status === 'clocked_in' && !a.clock_out
-                );
+                const userRecords = attendance.filter(a => {
+                  if (!a || !a.employee_id) return false;
+                  if (a.employee_id.trim() !== displayUser.email.trim()) return false;
+                  
+                  // Check date field first (it's usually a string like "2025-12-02")
+                  let recordDateStr = null;
+                  if (a.date) {
+                    if (typeof a.date === 'string') {
+                      recordDateStr = a.date.split('T')[0]; // Handle "2025-12-02" or "2025-12-02T..."
+                    } else if (a.date instanceof Date) {
+                      recordDateStr = a.date.toISOString().split('T')[0];
+                    }
+                  }
+                  
+                  // Fallback to clock_in if date field not available
+                  if (!recordDateStr && a.clock_in) {
+                    const clockInDate = new Date(a.clock_in);
+                    if (!isNaN(clockInDate.getTime())) {
+                      recordDateStr = clockInDate.toISOString().split('T')[0];
+                    }
+                  }
+                  
+                  // Fallback to getRecordDate if both above fail
+                  if (!recordDateStr) {
+                    const recordDate = getRecordDate(a);
+                    if (recordDate) {
+                      recordDateStr = recordDate instanceof Date 
+                        ? recordDate.toISOString().split('T')[0] 
+                        : String(recordDate).split('T')[0];
+                    }
+                  }
+                  
+                  return recordDateStr === today;
+                });
+                
+                const activeClockIn = userRecords.find(a => {
+                  if (!a || !a.clock_in) return false;
+                  if (a.clock_out) return false;
+                  const status = a.status;
+                  return status === 'clocked_in' || status === undefined || status === null || status === '';
+                });
+                
+                const isCurrentlyClockedIn = !!activeClockIn;
                 
                 return (
                   <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
@@ -1207,6 +1443,7 @@ export default function AttendancePage() {
                 </div>
               )}
             </Card>
+            </>
           );
         })}
       </div>
