@@ -6,7 +6,7 @@ import { useToast } from '../../components/Toast';
 import BreakDialog from '../../components/BreakDialog';
 import BreakTimer from '../../components/BreakTimer';
 import { Clock, Calendar, MessageSquare, FileText, LogIn, LogOut, Coffee, Play, Camera, Plane } from 'lucide-react';
-import { COLLECTIONS, ASSET_STATUS } from '../../constants';
+import { COLLECTIONS, ASSET_STATUS, ROLES } from '../../constants';
 import { shouldAutoClockOut, findStaleClockIns, canClockIn } from '../../utils/attendanceUtils';
 import Card from '../../components/primitives/Card.jsx';
 import ModalPortal from '../../components/primitives/ModalPortal.jsx';
