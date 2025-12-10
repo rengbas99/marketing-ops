@@ -22,8 +22,9 @@
   --z-sticky: 200;
   --z-header: 300;
   --z-overlay: 400;
-  --z-modal: 450;
-  --z-toast: 500;
+  --z-navbar: 450;
+  --z-modal: 500;
+  --z-toast: 600;
 
   /* motion tokens */
   --ease-fast: cubic-bezier(.2,.8,.2,1);
@@ -102,12 +103,43 @@ body.overlay-scroll-lock {
   pointer-events: auto;
   opacity: 1;
   transition: opacity var(--dur-medium) var(--ease-medium);
+  z-index: var(--z-overlay);
+}
+
+/* Ensure navbar stays above overlay backdrop */
+.z-navbar {
+  z-index: var(--z-navbar);
+  position: relative;
+  isolation: isolate;
 }
 
 @media (max-width: 768px) {
   .overlay-backdrop {
     backdrop-filter: blur(var(--glass-blur-mobile));
     -webkit-backdrop-filter: blur(var(--glass-blur-mobile));
+  }
+
+  /* Mobile-specific improvements */
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent horizontal scroll on mobile */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* Mobile padding utility */
+  .mobile-padding {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  /* Better touch targets on mobile */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 

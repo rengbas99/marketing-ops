@@ -102,11 +102,18 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Mobile Header */}
-      <Card glass className="lg:hidden fixed top-0 left-0 right-0 z-50 p-4 flex items-center justify-between rounded-none">
+      <Card 
+        className="lg:hidden fixed top-0 left-0 right-0 z-[var(--z-navbar)] p-4 flex items-center justify-between rounded-none bg-white border-b border-gray-100 shadow-sm"
+        style={{
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+        }}
+      >
         <h1 className="text-lg font-bold text-gradient">Reform Media</h1>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg hover:bg-gray-100"
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Toggle menu"
         >
           {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -117,9 +124,10 @@ export default function DashboardLayout({ children }) {
         glass
         as="aside"
         className={`
-        fixed lg:sticky top-0 left-0 h-screen w-72 border-r border-white/20 z-40 
+        fixed lg:sticky top-0 left-0 h-screen w-72 border-r border-white/20 z-[var(--z-navbar)] 
         transform transition-transform duration-300 ease-in-out flex flex-col rounded-none
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        lg:translate-x-0
       `}
       >
         {/* Logo */}
@@ -206,8 +214,8 @@ export default function DashboardLayout({ children }) {
       />
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 lg:pt-0 pt-16">
-        <div className="h-full p-4 md:p-8 max-w-7xl mx-auto">
+      <main className="flex-1 min-w-0 lg:pt-0 pt-16 overflow-x-hidden">
+        <div className="h-full p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           {children || <Outlet />}
         </div>
       </main>
