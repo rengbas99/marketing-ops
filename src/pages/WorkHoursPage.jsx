@@ -62,8 +62,12 @@ export default function WorkHoursPage() {
       .filter(a => {
         if (!a || a.employee_id !== employeeEmail) return false;
         try {
-          const date = new Date(a.date);
-          return date >= monthStart && date <= monthEnd && a.status === 'clocked_out';
+          // Use date field if available, otherwise fall back to clock_in date
+          // This handles cross-day clock outs correctly
+          const recordDate = a.date ? new Date(a.date) : 
+                            (a.clock_in ? new Date(a.clock_in) : null);
+          if (!recordDate) return false;
+          return recordDate >= monthStart && recordDate <= monthEnd && a.status === 'clocked_out';
         } catch {
           return false;
         }

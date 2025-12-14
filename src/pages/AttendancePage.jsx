@@ -390,8 +390,13 @@ export default function AttendancePage() {
         const workMinutes = Math.max(0, totalMinutes - totalBreakMinutes);
         const hoursWorkedExcludingBreaks = workMinutes / 60;
 
+        // Determine the work date (should be clock-in date, but ensure date field exists)
+        const clockInDate = clockInTime.toISOString().split('T')[0];
+        const workDate = todayAttendance.date || clockInDate;
+        
         await updateRow(COLLECTIONS.ATTENDANCE, index + 2, {
           ...todayAttendance,
+          date: workDate, // Ensure date field is set to work day (clock-in day)
           clock_out: clockOutTime.toISOString(),
           status: 'clocked_out',
           hours_worked: hoursWorkedExcludingBreaks.toFixed(2),
