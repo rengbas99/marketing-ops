@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import OverlayMount from './overlay/OverlayMount.jsx';
 import Card from './primitives/Card.jsx';
+import ConfirmDialog from './ConfirmDialog';
 import {
   LayoutDashboard,
   Users,
@@ -27,6 +28,7 @@ export default function DashboardLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -186,7 +188,7 @@ export default function DashboardLayout({ children }) {
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl"
           >
             <LogOut className="w-4 h-4 mr-2" />
@@ -219,6 +221,18 @@ export default function DashboardLayout({ children }) {
           {children || <Outlet />}
         </div>
       </main>
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Sign Out"
+        message="Are you sure you want to sign out? You'll need to log in again to access your dashboard."
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }
